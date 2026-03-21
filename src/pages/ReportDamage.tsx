@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Camera, MapPin, CheckCircle2, AlertTriangle, RotateCcw, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CameraCapture from "@/components/report/CameraCapture";
+import { createComplaint } from "@/services/api";
 
 const ReportDamage = () => {
   const { toast } = useToast();
@@ -80,31 +81,80 @@ const ReportDamage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    if (!imagePreview) {
+      toast({
+        title: "Image Required",
+        description: "Please capture an image of the road damage.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!gpsCoords) {
+      toast({
+        title: "GPS Location Required",
+        description: "Please allow GPS location access.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // Convert base64 to File
+      const response = await fetch(imagePreview);
+      const blob = await response.blob();
+      const imageFile = new File([blob], `damage-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
-    toast({
-      title: "Report Submitted Successfully!",
-      description: "Your complaint ID is SMC-2026-001235. You can track the status using this ID.",
-    });
+      // Submit to backend API
+      const result = await createComplaint(
+        imageFile,
+        gpsCoords.lat,
+        gpsCoords.lng,
+        formData.description || undefined
+      );
 
-    setIsSubmitting(false);
-    // Reset form
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-      damageType: "",
-      severity: "",
-      location: "",
-      landmark: "",
-      ward: "",
-      description: "",
-    });
-    setImagePreview(null);
-    setGpsCoords(null);
+      if (result.success && result.data) {
+        toast({
+          title: "Report Submitted Successfully!",
+          description: `Your complaint ID is ${result.data.id}. The image is being analyzed.`,
+        });
+
+        // Reset form
+        setFormData({
+          name: "",
+          phone: "",
+          email: "",
+          damageType: "",
+          severity: "",
+          location: "",
+          landmark: "",
+          ward: "",
+          description: "",
+        });
+        setImagePreview(null);
+        setGpsCoords(null);
+        setImageSize("");
+      } else {
+        toast({
+          title: "Submission Failed",
+          description: result.message || "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting complaint:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {

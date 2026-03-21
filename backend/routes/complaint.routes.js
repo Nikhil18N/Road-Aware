@@ -1,0 +1,119 @@
+const express = require('express');
+const multer = require('multer');
+const { body } = require('express-validator');
+const complaintController = require('../controllers/complaint.controller');
+const { isValidStatus } = require('../utils/validators');
+
+const router = express.Router();
+
+// Configure multer for file upload (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
+
+/**
+ * Validation middleware for creating complaints
+ */
+const createComplaintValidation = [
+  body('latitude')
+    .notEmpty()
+    .withMessage('Latitude is required')
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+  body('longitude')
+    .notEmpty()
+    .withMessage('Longitude is required')
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180'),
+  body('description')
+    .optional()
+    .isString()
+    .withMessage('Description must be a string')
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Description must not exceed 1000 characters')
+];
+
+/**
+ * Validation middleware for updating status
+ */
+const updateStatusValidation = [
+  body('status')
+    .notEmpty()
+    .withMessage('Status is required')
+    .isString()
+    .withMessage('Status must be a string')
+    .custom((value) => {
+      if (!isValidStatus(value)) {
+        throw new Error('Invalid status value. Must be one of: processing, analyzed, failed, pending, resolved');
+      }
+      return true;
+    })
+];
+
+/**
+ * @route   POST /api/complaints
+ * @desc    Create a new complaint with image upload
+ * @access  Public
+ */
+router.post(
+  '/',
+  upload.single('image'),
+  createComplaintValidation,
+  complaintController.createComplaint
+);
+
+/**
+ * @route   GET /api/complaints
+ * @desc    Get all complaints with optional filters
+ * @query   status, severity, limit, offset
+ * @access  Public
+ */
+router.get(
+  '/',
+  complaintController.getAllComplaints
+);
+
+/**
+ * @route   GET /api/complaints/stats
+ * @desc    Get complaint statistics
+ * @access  Public
+ */
+router.get(
+  '/stats',
+  complaintController.getStats
+);
+
+/**
+ * @route   GET /api/complaints/:id
+ * @desc    Get complaint by ID
+ * @access  Public
+ */
+router.get(
+  '/:id',
+  complaintController.getComplaintById
+);
+
+/**
+ * @route   PATCH /api/complaints/:id/status
+ * @desc    Update complaint status (for admin)
+ * @access  Public (should be protected with auth middleware in production)
+ */
+router.patch(
+  '/:id/status',
+  updateStatusValidation,
+  complaintController.updateComplaintStatus
+);
+
+module.exports = router;

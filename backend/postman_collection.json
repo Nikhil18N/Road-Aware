@@ -1,0 +1,214 @@
+{
+  "info": {
+    "name": "Road Damage Reporting API",
+    "description": "Smart Road Damage Reporting System - Backend API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "complaint_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check if the server is running"
+      }
+    },
+    {
+      "name": "Create Complaint",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('complaint_id', jsonData.data.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "image",
+              "type": "file",
+              "src": "/path/to/your/image.jpg",
+              "description": "Upload an image file (max 10MB)"
+            },
+            {
+              "key": "latitude",
+              "value": "17.6599",
+              "type": "text",
+              "description": "Latitude (-90 to 90)"
+            },
+            {
+              "key": "longitude",
+              "value": "75.9064",
+              "type": "text",
+              "description": "Longitude (-180 to 180)"
+            },
+            {
+              "key": "description",
+              "value": "Large pothole on MG Road near City Mall",
+              "type": "text",
+              "description": "Optional description"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/complaints",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints"]
+        },
+        "description": "Submit a new road damage complaint with image"
+      }
+    },
+    {
+      "name": "Get All Complaints",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/complaints",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints"],
+          "query": [
+            {
+              "key": "status",
+              "value": "analyzed",
+              "disabled": true,
+              "description": "Filter by status (processing, analyzed, failed, pending, resolved)"
+            },
+            {
+              "key": "severity",
+              "value": "High",
+              "disabled": true,
+              "description": "Filter by severity (Low, Medium, High)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "disabled": true,
+              "description": "Number of results to return"
+            },
+            {
+              "key": "offset",
+              "value": "0",
+              "disabled": true,
+              "description": "Pagination offset"
+            }
+          ]
+        },
+        "description": "Get all complaints with optional filters"
+      }
+    },
+    {
+      "name": "Get Complaint by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/complaints/{{complaint_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints", "{{complaint_id}}"]
+        },
+        "description": "Get details of a specific complaint by ID"
+      }
+    },
+    {
+      "name": "Update Complaint Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"resolved\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/complaints/{{complaint_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints", "{{complaint_id}}", "status"]
+        },
+        "description": "Update the status of a complaint (admin operation)"
+      }
+    },
+    {
+      "name": "Get Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/complaints/stats",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints", "stats"]
+        },
+        "description": "Get complaint statistics and analytics"
+      }
+    },
+    {
+      "name": "Filter by Status - Processing",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/complaints?status=processing",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints"],
+          "query": [
+            {
+              "key": "status",
+              "value": "processing"
+            }
+          ]
+        },
+        "description": "Get complaints that are currently being processed"
+      }
+    },
+    {
+      "name": "Filter by Severity - High",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/complaints?severity=High",
+          "host": ["{{base_url}}"],
+          "path": ["api", "complaints"],
+          "query": [
+            {
+              "key": "severity",
+              "value": "High"
+            }
+          ]
+        },
+        "description": "Get complaints with high severity"
+      }
+    }
+  ]
+}

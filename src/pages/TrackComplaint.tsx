@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Clock, User, FileText, CheckCircle2, AlertCircle, Wrench, ClipboardCheck } from "lucide-react";
+import { getComplaintById } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface ComplaintDetails {
   id: string;
@@ -76,6 +78,7 @@ const mockComplaint: ComplaintDetails = {
 };
 
 const TrackComplaint = () => {
+  const { toast } = useToast();
   const [searchId, setSearchId] = useState("");
   const [complaint, setComplaint] = useState<ComplaintDetails | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -89,16 +92,61 @@ const TrackComplaint = () => {
     setNotFound(false);
     setComplaint(null);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const result = await getComplaintById(searchId.trim());
 
-    if (searchId.toUpperCase().includes("SMC") || searchId.includes("1234")) {
-      setComplaint(mockComplaint);
-    } else {
+      if (result.success && result.data) {
+        // Transform backend data to component format
+        const formattedComplaint: ComplaintDetails = {
+          id: result.data.id,
+          type: "Road Damage", // Backend doesn't have type, using generic
+          severity: result.data.severity || "Unknown",
+          status: result.data.status,
+          location: `${result.data.latitude}, ${result.data.longitude}`,
+          ward: "N/A", // Backend doesn't have ward info
+          reportedBy: "Citizen", // Backend doesn't store reporter name
+          reportedAt: new Date(result.data.created_at).toLocaleString(),
+          assignedTo: null, // Backend doesn't have assignment yet
+          timeline: [
+            {
+              status: "Reported",
+              date: new Date(result.data.created_at).toLocaleString(),
+              description: "Complaint submitted by citizen",
+              icon: FileText,
+              isCompleted: true,
+            },
+            {
+              status: result.data.status === 'processing' ? 'Processing' : 'Analyzed',
+              date: new Date(result.data.updated_at).toLocaleString(),
+              description: result.data.status === 'processing'
+                ? 'Image analysis in progress'
+                : `${result.data.potholes_detected || 0} potholes detected`,
+              icon: result.data.status === 'analyzed' ? CheckCircle2 : Wrench,
+              isCompleted: result.data.status === 'analyzed',
+            },
+          ],
+        };
+
+        setComplaint(formattedComplaint);
+      } else {
+        setNotFound(true);
+        toast({
+          title: "Complaint Not Found",
+          description: result.message || "Please check the ID and try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error(' Error fetching complaint:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch complaint details.",
+        variant: "destructive",
+      });
       setNotFound(true);
+    } finally {
+      setIsSearching(false);
     }
-
-    setIsSearching(false);
   };
 
   const getStatusColor = (status: string) => {
