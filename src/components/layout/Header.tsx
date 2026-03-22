@@ -27,8 +27,10 @@ const Header = () => {
     { to: "/map", label: "Map", icon: Map },
     { to: "/report", label: "Report Damage", icon: FileText },
     { to: "/track", label: "Track Complaint", icon: Search },
-    // Show Dashboard only for Staff
-    ...(isAdminOrWorker ? [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
+    // Show Dashboard based on role
+    ...(role === 'admin' ? [{ to: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
+    ...(role === 'worker' ? [{ to: "/worker-dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
+    ...(role === 'user' && user ? [{ to: "/dashboard", label: "My Reports", icon: FileText }] : []),
   ];
 
   const handleSignOut = async () => {
@@ -92,12 +94,24 @@ const Header = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/track')}>
                     <Search className="mr-2 h-4 w-4" />
-                    <span>My Reports</span>
+                    <span>Track Report</span>
                   </DropdownMenuItem>
-                  {isAdminOrWorker && (
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  {role === 'admin' && (
+                    <DropdownMenuItem onClick={() => navigate('/admin-dashboard')}>
                       <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <span>Staff Dashboard</span>
+                      <span>Admin Dashboard</span>
+                    </DropdownMenuItem>
+                  )}
+                  {role === 'worker' && (
+                    <DropdownMenuItem onClick={() => navigate('/worker-dashboard')}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>Worker Dashboard</span>
+                    </DropdownMenuItem>
+                  )}
+                  {role === 'user' && (
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>My Reports</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />

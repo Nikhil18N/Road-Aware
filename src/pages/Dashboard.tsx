@@ -22,6 +22,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { DepartmentStatsView } from "@/components/dashboard/DepartmentStats";
 
 const statsCards = [
   {
@@ -237,6 +238,10 @@ const Dashboard = () => {
               <TabsTrigger value="wards" className="gap-2">
                 <MapPin className="h-4 w-4" />
                 Ward Stats
+              </TabsTrigger>
+              <TabsTrigger value="departments" className="gap-2">
+                <Users className="h-4 w-4" />
+                Departments
               </TabsTrigger>
             </TabsList>
 
@@ -465,6 +470,11 @@ const Dashboard = () => {
                   </Table>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Department Stats Tab */}
+            <TabsContent value="departments">
+              <DepartmentStatsView />
             </TabsContent>
           </Tabs>
         </div>

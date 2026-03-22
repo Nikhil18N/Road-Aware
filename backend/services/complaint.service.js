@@ -64,10 +64,12 @@ async function getAllComplaints(filters = {}) {
         query = query.eq('assigned_to', filters.assigned_to);
       }
 
-    if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+    // Apply department_id filter
+    if (filters.department_id) {
+      query = query.eq('department_id', filters.department_id);
     }
 
+    // Execute the query
     const { data, error, count } = await query;
 
     if (error) {
@@ -169,6 +171,105 @@ async function updateComplaintStatus(complaintId, status) {
     return await updateComplaint(complaintId, updates);
   } catch (error) {
     console.error('Error in updateComplaintStatus:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all departments
+ * @returns {Promise<Array>} List of departments
+ */
+async function getAllDepartments() {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error in getAllDepartments:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get Department Analytics
+ * @returns {Promise<Object>} Department statistics
+ */
+async function getDepartmentStats() {
+  try {
+    // We need to fetch complaints with their department info
+    // Since Supabase JS doesn't support complex GROUP BY easily without RPC,
+    // we will fetch necessary data and aggregate or use multiple queries.
+    
+    // 1. Get all departments
+    const { data: departments, error: deptError } = await supabase
+      .from('departments')
+      .select('*');
+      
+    if (deptError) throw deptError;
+
+    const stats = [];
+
+    for (const dept of departments) {
+      // Count total
+      const { count: total, error: totalError } = await supabase
+        .from('complaints')
+        .select('*', { count: 'exact', head: true })
+        .eq('department_id', dept.id);
+        
+      if (totalError) throw totalError;
+
+      // Count resolved
+      const { count: resolved, error: resolvedError } = await supabase
+        .from('complaints')
+        .select('*', { count: 'exact', head: true })
+        .eq('department_id', dept.id)
+        .eq('status', 'resolved');
+
+      if (resolvedError) throw resolvedError;
+
+      // Calculate avg resolution time (this requires fetching resolved rows)
+      // optimizing: only fetch resolved_at and created_at
+      const { data: resolvedComplaints, error: timeError } = await supabase
+        .from('complaints')
+        .select('created_at, resolved_at')
+        .eq('department_id', dept.id)
+        .eq('status', 'resolved')
+        .not('resolved_at', 'is', null);
+
+      if (timeError) throw timeError;
+
+      let avgHours = 0;
+      if (resolvedComplaints.length > 0) {
+        const totalMs = resolvedComplaints.reduce((acc, curr) => {
+          const start = new Date(curr.created_at);
+          const end = new Date(curr.resolved_at);
+          return acc + (end - start);
+        }, 0);
+        avgHours = (totalMs / resolvedComplaints.length) / (1000 * 60 * 60);
+      }
+
+      stats.push({
+        id: dept.id,
+        name: dept.name,
+        code: dept.code,
+        total_complaints: total,
+        resolved_complaints: resolved,
+        pending_complaints: total - resolved,
+        avg_resolution_hours: Math.round(avgHours * 10) / 10
+      });
+    }
+
+    return {
+      success: true,
+      data: stats
+    };
+  } catch (error) {
+    console.error('Error in getDepartmentStats:', error);
     throw error;
   }
 }
@@ -329,6 +430,70 @@ async function getComplaintsByContact(contact) {
   }
 }
 
+/**
+ * Auto-assign complaint to appropriate department based on issue type
+ * @param {string} damageType - Type of damage
+ * @param {string} severity - Severity level
+ * @returns {Promise<Object>} Department assignment info
+ */
+async function autoAssignDepartment(damageType, severity) {
+  try {
+    // Map issue types to departments
+    const departmentMapping = {
+      'pothole': 1,           // Public Works Department
+      'crack': 1,             // Public Works Department
+      'surface crack': 1,     // Public Works Department
+      'waterlogging': 3,      // Drainage & Sewage Department
+      'open manhole': 3,      // Drainage & Sewage Department
+      'cave-in': 1,           // Public Works Department
+      'cave in': 1,           // Public Works Department
+      'edge erosion': 1,      // Public Works Department
+      'water leak': 2,        // Water Supply Department
+      'pipeline': 2,          // Water Supply Department
+      'streetlight': 5,       // Electricity Department
+      'electrical pole': 5,   // Electricity Department
+      'electricity': 5,       // Electricity Department
+      'encroachment': 4,      // Town Planning Department
+      'illegal construction': 4 // Town Planning Department
+    };
+
+    // Get department ID based on damage type
+    let deptId = departmentMapping[damageType?.toLowerCase()] || 1; // Default to PWD
+
+    // Escalate to urgent teams if severity is high
+    if (severity === 'Critical' || severity === 'High') {
+      if (damageType?.toLowerCase().includes('waterlog') || damageType?.toLowerCase().includes('manhole')) {
+        deptId = 3; // Drainage
+      } else if (damageType?.toLowerCase().includes('water') || damageType?.toLowerCase().includes('pipeline')) {
+        deptId = 2; // Water Supply
+      } else {
+        deptId = 1; // PWD for critical road issues
+      }
+    }
+
+    // Fetch department details
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .eq('id', deptId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching department:', error);
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      departmentId: deptId,
+      department: data
+    };
+  } catch (error) {
+    console.error('Error in autoAssignDepartment:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -337,5 +502,8 @@ module.exports = {
   updateComplaintStatus,
   checkDuplicateByLocation,
   getComplaintStats,
-  getComplaintsByContact
+  getComplaintsByContact,
+  getDepartmentStats,
+  getAllDepartments,
+  autoAssignDepartment
 };

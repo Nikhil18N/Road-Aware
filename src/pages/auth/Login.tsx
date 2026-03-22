@@ -27,7 +27,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -39,7 +39,19 @@ const Login = () => {
         description: "Welcome back!",
       });
 
-      navigate('/'); // Redirect to home or dashboard
+      // Get user profile to determine role
+      if (data.user) {
+        const role = data.user.user_metadata?.role || 'user';
+
+        // Redirect based on role
+        if (role === 'admin') {
+          navigate('/admin-dashboard');
+        } else if (role === 'worker') {
+          navigate('/worker-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",

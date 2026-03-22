@@ -120,6 +120,26 @@ router.get(
 );
 
 /**
+ * @route   GET /api/complaints/departments
+ * @desc    Get all departments
+ * @access  Public
+ */
+router.get(
+  '/departments',
+  complaintController.getDepartments
+);
+
+/**
+ * @route   GET /api/complaints/analytics/departments
+ * @desc    Get department statistics
+ * @access  Public (or Protected in future)
+ */
+router.get(
+  '/analytics/departments',
+  complaintController.getDepartmentAnalytics
+);
+
+/**
  * @route   GET /api/complaints/contact/:contact
  * @desc    Get complaints by contact (phone or email)
  * @access  Public
@@ -150,6 +170,19 @@ router.patch(
   authorize(['worker', 'admin']), // Require specific roles
   updateStatusValidation,
   complaintController.updateComplaintStatus
+);
+
+/**
+ * @route   PUT /api/complaints/:id/assign-department
+ * @desc    Assign complaint to a department
+ * @access  Protected (Admin, Worker)
+ */
+router.put(
+  '/:id/assign-department',
+  authenticate(false), // Require Auth
+  authorize(['worker', 'admin']), // ideally just admin
+  body('department_id').isNumeric().withMessage('Department ID must be a number'),
+  complaintController.assignToDepartment
 );
 
 module.exports = router;

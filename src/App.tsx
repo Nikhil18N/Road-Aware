@@ -9,7 +9,9 @@ import Index from "./pages/Index";
 import ReportDamage from "./pages/ReportDamage";
 import TrackComplaint from "./pages/TrackComplaint";
 import PublicMap from "./pages/PublicMap";
-import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import WorkerDashboard from "./pages/WorkerDashboard";
+import UserDashboard from "./pages/UserDashboard";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
@@ -30,17 +32,32 @@ const App = () => (
             <Route path="/map" element={<PublicMap />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
+
             {/* Protected Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['worker', 'admin']} />}>
-              <Route path="/dashboard" element={<Dashboard />} />
+
+            {/* Admin Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
             </Route>
+
+            {/* Worker Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['worker']} />}>
+              <Route path="/worker-dashboard" element={<WorkerDashboard />} />
+            </Route>
+
+            {/* User Dashboard */}
+            <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+              <Route path="/dashboard" element={<UserDashboard />} />
+            </Route>
+
+            {/* Catch-all legacy route - redirect based on role */}
+            <Route path="/dashboard/*" element={<UserDashboard />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-  </TooltipProvider>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

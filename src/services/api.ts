@@ -32,6 +32,7 @@ export interface Complaint {
   landmark?: string;
   assigned_to?: string; // Worker UUID
   ward_id?: string;
+  department_id?: number;
   description?: string;
   damage_type?: string; // e.g. pothole, crack
   reporter_name?: string;
@@ -61,6 +62,23 @@ export interface ComplaintStats {
     Medium: number;
     High: number;
   };
+}
+
+export interface Department {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+}
+
+export interface DepartmentStats {
+  id: number;
+  name: string;
+  code: string;
+  total_complaints: number;
+  resolved_complaints: number;
+  pending_complaints: number;
+  avg_resolution_hours: number;
 }
 
 /**
@@ -134,6 +152,7 @@ export async function getAllComplaints(filters?: {
   offset?: number;
   my?: boolean;
   assigned_to?: string;
+  department_id?: number;
 }): Promise<ApiResponse<{ complaints: Complaint[]; count: number }>> {
   try {
     const queryParams = new URLSearchParams();
@@ -141,6 +160,7 @@ export async function getAllComplaints(filters?: {
     if (filters?.status) queryParams.append('status', filters.status);
     if (filters?.severity) queryParams.append('severity', filters.severity);
     if (filters?.assigned_to) queryParams.append('assigned_to', filters.assigned_to);
+    if (filters?.department_id) queryParams.append('department_id', filters.department_id.toString());
     if (filters?.limit) queryParams.append('limit', filters.limit.toString());
     if (filters?.offset) queryParams.append('offset', filters.offset.toString());
     if (filters?.my) queryParams.append('my', 'true');
@@ -264,3 +284,45 @@ export async function getComplaintsByContact(contact: string): Promise<ApiRespon
     return { success: false, message: 'Network error' };
   }
 }
+
+export async function getDepartments(): Promise<ApiResponse<Department[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/complaints/departments`);
+    const data = await response.json();
+    if (!response.ok) return { success: false, message: 'Failed to fetch departments', errors: {} };
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error', errors: {} };
+  }
+}
+
+export async function getDepartmentAnalytics(): Promise<ApiResponse<DepartmentStats[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/complaints/analytics/departments`);
+    const data = await response.json();
+    if (!response.ok) return { success: false, message: 'Failed to fetch analytics', errors: {} };
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error', errors: {} };
+  }
+}
+
+export async function assignDepartment(id: string, departmentId: number): Promise<ApiResponse<Complaint>> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/complaints/${id}/assign-department`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers
+        },
+        body: JSON.stringify({ department_id: departmentId }),
+    });
+    const data = await response.json();
+    if (!response.ok) return { success: false, message: 'Failed to assign department', errors: {} };
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error', errors: {} };
+  }
+}
+

@@ -13,9 +13,9 @@ const HeroSection = () => {
       </div>
 
       <div className="container relative py-20 lg:py-32">
-        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+        <div className="grid gap-12 lg:grid-cols-1 lg:gap-16 items-center">
           {/* Content */}
-          <div className="space-y-8 animate-slide-up">
+          <div className="space-y-8 animate-slide-up max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
               <CheckCircle2 className="h-4 w-4" />
               <span>Official SMC Initiative</span>
@@ -61,43 +61,6 @@ const HeroSection = () => {
                 <p className="text-sm text-muted-foreground">Satisfaction Rate</p>
               </div>
             </div>
-          </div>
-
-          {/* Illustration Card */}
-          <div className="relative animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            <div className="relative rounded-2xl bg-card shadow-xl border border-border overflow-hidden">
-              {/* Map Placeholder */}
-              <div className="aspect-[4/3] bg-gradient-to-br from-muted to-secondary relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center space-y-4 p-8">
-                    <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                      <AlertTriangle className="h-10 w-10 text-primary" />
-                    </div>
-                    <p className="text-lg font-semibold text-foreground">Interactive Map View</p>
-                    <p className="text-sm text-muted-foreground">View reported issues across Solapur city</p>
-                  </div>
-                </div>
-                
-                {/* Floating markers */}
-                <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-destructive rounded-full animate-pulse shadow-lg" />
-                <div className="absolute top-1/3 right-1/3 w-4 h-4 bg-warning rounded-full animate-pulse shadow-lg" style={{ animationDelay: "0.5s" }} />
-                <div className="absolute bottom-1/3 left-1/2 w-4 h-4 bg-success rounded-full animate-pulse shadow-lg" style={{ animationDelay: "1s" }} />
-              </div>
-
-              {/* Card Footer */}
-              <div className="p-4 bg-card border-t border-border">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Active Reports: <strong className="text-foreground">127</strong></span>
-                  <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                    <span className="text-success font-medium">Live Updates</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Decorative Elements */}
-            <div className="absolute -z-10 -bottom-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
           </div>
         </div>
       </div>

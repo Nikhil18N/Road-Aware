@@ -29,7 +29,7 @@ async function analyzeImage(imageUrl) {
 
     if (
       typeof potholes_detected !== 'number' ||
-      !['Low', 'Medium', 'High'].includes(severity)
+      !['Low', 'Medium', 'High', 'Critical'].includes(severity)
     ) {
       throw new Error('Invalid ML API response format');
     }
@@ -84,10 +84,14 @@ async function processImageAsync(complaintId, imageUrl, updateCallback) {
     const result = await analyzeImage(imageUrl);
 
     if (result.success) {
+      // Map Critical severity to High to satisfy database constraint
+      // TODO: Update database schema to support 'Critical' status
+      const severity = result.data.severity === 'Critical' ? 'High' : result.data.severity;
+
       // Update complaint with ML results
       await updateCallback(complaintId, {
         potholes_detected: result.data.potholes_detected,
-        severity: result.data.severity,
+        severity: severity,
         largest_pothole_area: result.data.largest_pothole_area,
         status: 'analyzed'
       });

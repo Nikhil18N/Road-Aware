@@ -81,7 +81,7 @@ const RecentReports = () => {
               Latest road damage reports from citizens
             </p>
           </div>
-          <Link to="/dashboard">
+          <Link to="/map">
             <Button variant="outline" className="group">
               View All Reports
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />

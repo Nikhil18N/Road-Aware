@@ -84,6 +84,25 @@ async function createComplaint(req, res) {
 
     const complaint = createResult.data;
 
+    // Auto-assign complaint to appropriate department based on damage type/severity
+    try {
+      const assignmentResult = await complaintService.autoAssignDepartment(
+        description,
+        complaint.severity || 'Medium'
+      );
+
+      if (assignmentResult.success && assignmentResult.departmentId) {
+        // Update complaint with assigned department
+        await complaintService.updateComplaint(complaint.id, {
+          department_id: assignmentResult.departmentId
+        });
+        console.log(`✅ Complaint ${complaint.id} auto-assigned to department ${assignmentResult.department.name}`);
+      }
+    } catch (assignError) {
+      console.error('Auto-assignment error (non-blocking):', assignError);
+      // Continue even if assignment fails
+    }
+
     // Trigger ML processing asynchronously (non-blocking)
     // This runs in the background and updates the complaint when done
     mlService.processImageAsync(
@@ -120,7 +139,7 @@ async function createComplaint(req, res) {
  */
 async function getAllComplaints(req, res) {
   try {
-    const { status, severity, limit, offset, my, assigned_to } = req.query;
+    const { status, severity, limit, offset, my, assigned_to, department_id } = req.query;
     const user = req.user;
 
     const filters = {
@@ -138,6 +157,11 @@ async function getAllComplaints(req, res) {
     // Filter by assigned_to
     if (assigned_to) {
         filters.assigned_to = assigned_to;
+    }
+
+    // Filter by department_id
+    if (department_id) {
+        filters.department_id = department_id;
     }
 
     const result = await complaintService.getAllComplaints(filters);
@@ -272,11 +296,90 @@ async function getComplaintsByContact(req, res) {
   }
 }
 
+/**
+ * Get All Departments
+ * GET /departments
+ */
+async function getDepartments(req, res) {
+  try {
+    const result = await complaintService.getAllDepartments();
+    
+    if (!result.success) {
+      return errorResponse(res, 'Failed to fetch departments', 500);
+    }
+    
+    return successResponse(res, result.data, 'Departments fetched successfully');
+  } catch (error) {
+    console.error('Error in getDepartments:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
+/**
+ * Get Department Analytics
+ * GET /complaints/analytics/departments
+ */
+async function getDepartmentAnalytics(req, res) {
+  try {
+    const result = await complaintService.getDepartmentStats();
+    
+    if (!result.success) {
+      return errorResponse(res, 'Failed to fetch department statistics', 500);
+    }
+
+    return successResponse(res, result.data, 'Department statistics fetched successfully');
+  } catch (error) {
+    console.error('Error in getDepartmentAnalytics:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
+/**
+ * Assign complaint to department
+ * PUT /complaints/:id/assign-department
+ */
+async function assignToDepartment(req, res) {
+  try {
+    const { id } = req.params;
+    const { department_id } = req.body;
+
+    if (!department_id) {
+        return errorResponse(res, 'Department ID is required', 400);
+    }
+
+    // Update complaint logic
+    const updates = { 
+        department_id: department_id,
+        updated_at: new Date()
+    };
+    
+    // Check if complaint exists first
+    const complaint = await complaintService.getComplaintById(id);
+    if (!complaint.success || !complaint.data) {
+        return errorResponse(res, 'Complaint not found', 404);
+    }
+
+    const result = await complaintService.updateComplaint(id, updates);
+
+    if (!result.success) {
+      return errorResponse(res, 'Failed to assign department', 500);
+    }
+
+    return successResponse(res, result.data, 'Complaint assigned to department successfully');
+  } catch (error) {
+    console.error('Error in assignToDepartment:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
   getComplaintById,
   updateComplaintStatus,
   getStats,
-  getComplaintsByContact
+  getComplaintsByContact,
+  getDepartmentAnalytics,
+  assignToDepartment,
+  getDepartments
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Camera, MapPin, CheckCircle2, AlertTriangle, RotateCcw, ImageIcon, Copy, Check } from "lucide-react";
+import { Camera, MapPin, CheckCircle2, AlertTriangle, RotateCcw, ImageIcon, Copy, Check, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CameraCapture from "@/components/report/CameraCapture";
 import { createComplaint } from "@/services/api";
@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 const ReportDamage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<string>("");
@@ -81,20 +82,66 @@ const ReportDamage = () => {
 
   const handleImageCapture = (imageData: string, quality: number) => {
     setImagePreview(imageData);
-    
+
     // Calculate file size
     const base64Length = imageData.length - "data:image/jpeg;base64,".length;
     const sizeInBytes = (base64Length * 3) / 4;
     const sizeInKB = (sizeInBytes / 1024).toFixed(1);
     setImageSize(`${sizeInKB} KB (${quality}% quality)`);
-    
+
     // Auto-capture GPS when image is taken
     captureGPSLocation();
-    
+
     toast({
       title: "Image Captured!",
       description: `Photo saved at ${quality}% quality (${sizeInKB} KB)`,
     });
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please select an image file (JPG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Read file and convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageData = e.target?.result as string;
+      setImagePreview(imageData);
+
+      // Calculate file size
+      const sizeInKB = (file.size / 1024).toFixed(1);
+      setImageSize(`${sizeInKB} KB (Original size)`);
+
+      // Auto-capture GPS when image is selected
+      captureGPSLocation();
+
+      toast({
+        title: "Image Uploaded!",
+        description: `Photo loaded (${sizeInKB} KB)`,
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRetakeImage = () => {
@@ -249,14 +296,39 @@ const ReportDamage = () => {
                         </div>
                         <Button type="button" variant="outline" className="w-full" onClick={handleRetakeImage}>
                           <RotateCcw className="h-4 w-4 mr-2" />
-                          Retake Image
+                          Change Image
                         </Button>
                       </>
                     ) : (
-                      <Button type="button" variant="outline" className="w-full" onClick={() => setIsCameraOpen(true)}>
-                        <Camera className="h-4 w-4 mr-2" />
-                        Open Camera
-                      </Button>
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setIsCameraOpen(true)}
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Take Photo
+                        </Button>
+                        <div className="relative">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Choose from Gallery
+                          </Button>
+                        </div>
+                      </div>
                     )}
 
                     {/* GPS Location Display */}

@@ -120,7 +120,7 @@ const PublicMap = () => {
                   </Alert>
                 </div>
               ) : (
-                <ComplaintMap complaints={complaints} />
+                <ComplaintMap complaints={complaints} showHeatmap={true} />
               )}
             </CardContent>
           </Card>
