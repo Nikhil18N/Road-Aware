@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -156,7 +156,7 @@ const Register = () => {
                   placeholder="Enter code provided by SMC"
                   value={staffCode}
                   onChange={(e) => setStaffCode(e.target.value)}
-                  required={role !== 'user'}
+                  required
                 />
                 <p className="text-xs text-muted-foreground">
                   Ask your supervisor for the code. (Try SMC-WORKER-2026 or SMC-ADMIN-2026)
