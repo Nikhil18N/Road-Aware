@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import ReportDamage from "./pages/ReportDamage";
 import TrackComplaint from "./pages/TrackComplaint";
+import PublicMap from "./pages/PublicMap";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/report" element={<ReportDamage />} />
             <Route path="/track" element={<TrackComplaint />} />
+            <Route path="/map" element={<PublicMap />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             

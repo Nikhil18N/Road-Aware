@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MapPin, Menu, X, FileText, LayoutDashboard, Search, LogOut, User } from "lucide-react";
+import { MapPin, Menu, X, FileText, LayoutDashboard, Search, LogOut, User, Map } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -24,6 +24,7 @@ const Header = () => {
 
   const navLinks = [
     { to: "/", label: "Home", icon: MapPin },
+    { to: "/map", label: "Map", icon: Map },
     { to: "/report", label: "Report Damage", icon: FileText },
     { to: "/track", label: "Track Complaint", icon: Search },
     // Show Dashboard only for Staff

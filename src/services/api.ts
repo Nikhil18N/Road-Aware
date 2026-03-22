@@ -24,17 +24,23 @@ export interface ApiResponse<T> {
 
 export interface Complaint {
   id: string;
+  complaint_id?: string; // e.g. SMC-2026-001
   image_url: string;
   latitude: number;
   longitude: number;
+  location?: string;
+  landmark?: string;
+  assigned_to?: string; // Worker UUID
+  ward_id?: string;
   description?: string;
+  damage_type?: string; // e.g. pothole, crack
   reporter_name?: string;
   reporter_phone?: string;
   reporter_email?: string;
   potholes_detected?: number;
-  severity?: 'Low' | 'Medium' | 'High';
+  severity?: 'Low' | 'Medium' | 'High' | 'Critical'; // Matches both DB (lowercase usually) and API. Let's be flexible.
   largest_pothole_area?: number;
-  status: 'processing' | 'analyzed' | 'failed' | 'pending' | 'resolved';
+  status: 'processing' | 'analyzed' | 'failed' | 'pending' | 'resolved' | 'rejected' | 'in_progress';
   error_message?: string;
   created_at: string;
   updated_at: string;
@@ -127,12 +133,14 @@ export async function getAllComplaints(filters?: {
   limit?: number;
   offset?: number;
   my?: boolean;
+  assigned_to?: string;
 }): Promise<ApiResponse<{ complaints: Complaint[]; count: number }>> {
   try {
     const queryParams = new URLSearchParams();
 
     if (filters?.status) queryParams.append('status', filters.status);
     if (filters?.severity) queryParams.append('severity', filters.severity);
+    if (filters?.assigned_to) queryParams.append('assigned_to', filters.assigned_to);
     if (filters?.limit) queryParams.append('limit', filters.limit.toString());
     if (filters?.offset) queryParams.append('offset', filters.offset.toString());
     if (filters?.my) queryParams.append('my', 'true');
