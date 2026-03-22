@@ -3,9 +3,12 @@ const multer = require('multer');
 const { body } = require('express-validator');
 const complaintController = require('../controllers/complaint.controller');
 const { isValidStatus } = require('../utils/validators');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// Public routes
+// POST - Create a new complaint (allow anonymous reports too, or verify user if present)
 // Configure multer for file upload (memory storage)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -88,6 +91,7 @@ const updateStatusValidation = [
  */
 router.post(
   '/',
+  authenticate(true), // Optional authentication (attaches user if present)
   upload.single('image'),
   createComplaintValidation,
   complaintController.createComplaint
@@ -97,10 +101,11 @@ router.post(
  * @route   GET /api/complaints
  * @desc    Get all complaints with optional filters
  * @query   status, severity, limit, offset
- * @access  Public
+ * @access  Start Public (filtered), Auth for Workers/Admin
  */
 router.get(
   '/',
+  authenticate(true), // Optional auth
   complaintController.getAllComplaints
 );
 
@@ -137,10 +142,12 @@ router.get(
 /**
  * @route   PATCH /api/complaints/:id/status
  * @desc    Update complaint status (for admin)
- * @access  Public (should be protected with auth middleware in production)
+ * @access  Protected (Worker, Admin)
  */
 router.patch(
   '/:id/status',
+  authenticate(false), // Require Auth
+  authorize(['worker', 'admin']), // Require specific roles
   updateStatusValidation,
   complaintController.updateComplaintStatus
 );

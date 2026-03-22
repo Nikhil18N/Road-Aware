@@ -23,6 +23,7 @@ async function createComplaint(req, res) {
 
     const { latitude, longitude, description, name, phone, email } = req.body;
     const imageFile = req.file;
+    const userId = req.user ? req.user.id : null; // Get authenticated user ID
 
     // Validate image file exists
     if (!imageFile) {
@@ -66,6 +67,7 @@ async function createComplaint(req, res) {
       reporter_name: name || null,
       reporter_phone: phone || null,
       reporter_email: email || null,
+      user_id: userId, // Add user ID
       status: 'processing',
       potholes_detected: null,
       severity: null,
@@ -118,8 +120,9 @@ async function createComplaint(req, res) {
  */
 async function getAllComplaints(req, res) {
   try {
-    const { status, severity, limit, offset } = req.query;
-
+    const { status, severity, limit, offset, my } = req.query;
+    const user = req.user;
+    
     const filters = {
       status,
       severity,
@@ -127,6 +130,11 @@ async function getAllComplaints(req, res) {
       offset: offset ? parseInt(offset) : undefined
     };
 
+    // Filter by user if requested and authenticated
+    if (my === 'true' && user) {
+       filters.user_id = user.id;
+    }
+    
     const result = await complaintService.getAllComplaints(filters);
 
     if (!result.success) {

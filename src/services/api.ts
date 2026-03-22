@@ -2,8 +2,18 @@
  * API Client for Road-Aware Backend
  * Handles all HTTP requests to the Node.js/Express backend
  */
+import { supabase } from '@/lib/supabase';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {};
+  if (session?.access_token) {
+    headers['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return headers;
+}
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -77,9 +87,15 @@ export async function createComplaint(
       formData.append('email', email);
     }
 
+    const authHeaders = await getAuthHeaders();
+
     const response = await fetch(`${API_BASE_URL}/complaints`, {
       method: 'POST',
       body: formData,
+      headers: {
+        ...authHeaders
+        // Content-Type is set automatically for FormData
+      }
     });
 
     const data = await response.json();
@@ -110,6 +126,7 @@ export async function getAllComplaints(filters?: {
   severity?: string;
   limit?: number;
   offset?: number;
+  my?: boolean;
 }): Promise<ApiResponse<{ complaints: Complaint[]; count: number }>> {
   try {
     const queryParams = new URLSearchParams();
@@ -118,10 +135,17 @@ export async function getAllComplaints(filters?: {
     if (filters?.severity) queryParams.append('severity', filters.severity);
     if (filters?.limit) queryParams.append('limit', filters.limit.toString());
     if (filters?.offset) queryParams.append('offset', filters.offset.toString());
+    if (filters?.my) queryParams.append('my', 'true');
 
     const url = `${API_BASE_URL}/complaints${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const authHeaders = await getAuthHeaders();
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        ...authHeaders
+      }
+    });
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -146,7 +170,13 @@ export async function getAllComplaints(filters?: {
  */
 export async function getComplaintById(id: string): Promise<ApiResponse<Complaint>> {
   try {
-    const response = await fetch(`${API_BASE_URL}/complaints/${id}`);
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/complaints/${id}`, {
+      headers: {
+        ...authHeaders
+      }
+    });
+    
     const data = await response.json();
 
     if (!response.ok) {
@@ -174,10 +204,13 @@ export async function updateComplaintStatus(
   status: string
 ): Promise<ApiResponse<Complaint>> {
   try {
+    const authHeaders = await getAuthHeaders();
+    
     const response = await fetch(`${API_BASE_URL}/complaints/${id}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders
       },
       body: JSON.stringify({ status }),
     });
@@ -201,52 +234,25 @@ export async function updateComplaintStatus(
   }
 }
 
-/**
- * Get complaints by contact (phone or email)
- */
-export async function getComplaintsByContact(contact: string): Promise<ApiResponse<{ complaints: Complaint[]; count: number }>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/complaints/contact/${encodeURIComponent(contact)}`);
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: data.message || 'Failed to fetch complaints',
-      };
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error fetching complaints by contact:', error);
-    return {
-      success: false,
-      message: 'Network error. Please check your connection.',
-    };
-  }
-}
-
-/**
- * Get complaint statistics
- */
-export async function getComplaintStats(): Promise<ApiResponse<ComplaintStats>> {
+export async function getStats(): Promise<ApiResponse<ComplaintStats>> {
   try {
     const response = await fetch(`${API_BASE_URL}/complaints/stats`);
     const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: data.message || 'Failed to fetch statistics',
-      };
-    }
-
+    
+    if (!response.ok) return { success: false, message: 'Failed to fetch stats' };
     return data;
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    return {
-      success: false,
-      message: 'Network error. Please check your connection.',
-    };
+    return { success: false, message: 'Network error' };
+  }
+}
+
+export async function getComplaintsByContact(contact: string): Promise<ApiResponse<{complaints: Complaint[]}>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/complaints/contact/${contact}`);
+    const data = await response.json();
+    if (!response.ok) return { success: false, message: 'Failed' };
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error' };
   }
 }

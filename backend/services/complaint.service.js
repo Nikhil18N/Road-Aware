@@ -44,6 +44,11 @@ async function getAllComplaints(filters = {}) {
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
+    // Apply user_id filter (for users to see own reports)
+    if (filters.user_id) {
+      query = query.eq('user_id', filters.user_id);
+    }
+    
     // Apply status filter
     if (filters.status) {
       query = query.eq('status', filters.status);
