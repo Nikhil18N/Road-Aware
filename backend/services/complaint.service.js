@@ -294,6 +294,36 @@ async function getComplaintStats() {
   }
 }
 
+/**
+ * Get complaints by contact information (phone or email)
+ * @param {string} contact - Phone number or email
+ * @returns {Promise<Array>} Array of complaints
+ */
+async function getComplaintsByContact(contact) {
+  try {
+    // Search by phone or email
+    const { data, error } = await supabase
+      .from('complaints')
+      .select('*')
+      .or(`reporter_phone.eq.${contact},reporter_email.eq.${contact}`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Database query error:', error);
+      throw new Error(`Failed to fetch complaints: ${error.message}`);
+    }
+
+    return {
+      success: true,
+      data: data || [],
+      count: data?.length || 0
+    };
+  } catch (error) {
+    console.error('Error in getComplaintsByContact:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -301,5 +331,6 @@ module.exports = {
   updateComplaint,
   updateComplaintStatus,
   checkDuplicateByLocation,
-  getComplaintStats
+  getComplaintStats,
+  getComplaintsByContact
 };

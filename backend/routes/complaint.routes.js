@@ -42,7 +42,26 @@ const createComplaintValidation = [
     .withMessage('Description must be a string')
     .trim()
     .isLength({ max: 1000 })
-    .withMessage('Description must not exceed 1000 characters')
+    .withMessage('Description must not exceed 1000 characters'),
+  body('name')
+    .optional()
+    .isString()
+    .withMessage('Name must be a string')
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Name must not exceed 100 characters'),
+  body('phone')
+    .optional()
+    .isString()
+    .withMessage('Phone must be a string')
+    .trim()
+    .matches(/^[0-9]{10}$/)
+    .withMessage('Phone must be a 10-digit number'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Email must be valid')
+    .normalizeEmail()
 ];
 
 /**
@@ -93,6 +112,16 @@ router.get(
 router.get(
   '/stats',
   complaintController.getStats
+);
+
+/**
+ * @route   GET /api/complaints/contact/:contact
+ * @desc    Get complaints by contact (phone or email)
+ * @access  Public
+ */
+router.get(
+  '/contact/:contact',
+  complaintController.getComplaintsByContact
 );
 
 /**

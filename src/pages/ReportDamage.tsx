@@ -7,18 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, MapPin, CheckCircle2, AlertTriangle, RotateCcw, ImageIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Camera, MapPin, CheckCircle2, AlertTriangle, RotateCcw, ImageIcon, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CameraCapture from "@/components/report/CameraCapture";
 import { createComplaint } from "@/services/api";
+import { useNavigate } from "react-router-dom";
 
 const ReportDamage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<string>("");
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [submittedComplaintId, setSubmittedComplaintId] = useState<string>("");
+  const [isCopied, setIsCopied] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -30,6 +36,24 @@ const ReportDamage = () => {
     ward: "",
     description: "",
   });
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(submittedComplaintId);
+      setIsCopied(true);
+      toast({
+        title: "Copied!",
+        description: "Complaint ID copied to clipboard",
+      });
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Please copy the ID manually",
+        variant: "destructive",
+      });
+    }
+  };
 
   const captureGPSLocation = () => {
     if ("geolocation" in navigator) {
@@ -114,14 +138,16 @@ const ReportDamage = () => {
         imageFile,
         gpsCoords.lat,
         gpsCoords.lng,
-        formData.description || undefined
+        formData.description || undefined,
+        formData.name || undefined,
+        formData.phone || undefined,
+        formData.email || undefined
       );
 
       if (result.success && result.data) {
-        toast({
-          title: "Report Submitted Successfully!",
-          description: `Your complaint ID is ${result.data.id}. The image is being analyzed.`,
-        });
+        // Show success dialog with complaint ID
+        setSubmittedComplaintId(result.data.id);
+        setShowSuccessDialog(true);
 
         // Reset form
         setFormData({
@@ -258,53 +284,55 @@ const ReportDamage = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Personal Info */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Enter your name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        required
-                      />
+                  {/* Personal Info - Optional for Anonymous Reporting */}
+                  <div className="p-4 bg-muted/50 rounded-lg border border-border mb-4">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      <strong className="text-foreground">Optional:</strong> Provide your contact details if you want to receive updates about your complaint. You can skip this and track using your Complaint ID.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name (Optional)</Label>
+                        <Input
+                          id="name"
+                          placeholder="Enter your name"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange("name", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number (Optional)</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="For updates via SMS"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
+
+                    <div className="space-y-2 mt-4">
+                      <Label htmlFor="email">Email Address (Optional)</Label>
                       <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="10-digit mobile number"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        required
+                        id="email"
+                        type="email"
+                        placeholder="For updates via email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Optional"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                    />
-                  </div>
-
-                  {/* Damage Details */}
+                  {/* Damage Details - Optional, AI will detect */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Type of Damage *</Label>
+                      <Label>Type of Damage (Optional)</Label>
                       <Select
                         value={formData.damageType}
                         onValueChange={(value) => handleInputChange("damageType", value)}
-                        required
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select damage type" />
+                          <SelectValue placeholder="Auto-detected by AI" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="pothole">Pothole</SelectItem>
@@ -317,14 +345,13 @@ const ReportDamage = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Severity Level *</Label>
+                      <Label>Severity Level (Optional)</Label>
                       <Select
                         value={formData.severity}
                         onValueChange={(value) => handleInputChange("severity", value)}
-                        required
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select severity" />
+                          <SelectValue placeholder="Auto-detected by AI" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="low">Low - Minor inconvenience</SelectItem>
@@ -335,21 +362,20 @@ const ReportDamage = () => {
                     </div>
                   </div>
 
-                  {/* Location Details */}
+                  {/* Location Details - GPS Coordinates are Required */}
                   <div className="space-y-2">
-                    <Label htmlFor="location">Location / Address *</Label>
+                    <Label htmlFor="location">Location / Address (Optional)</Label>
                     <Input
                       id="location"
-                      placeholder="Street name and area"
+                      placeholder="Street name and area (GPS will be used)"
                       value={formData.location}
                       onChange={(e) => handleInputChange("location", e.target.value)}
-                      required
                     />
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="landmark">Nearby Landmark</Label>
+                      <Label htmlFor="landmark">Nearby Landmark (Optional)</Label>
                       <Input
                         id="landmark"
                         placeholder="e.g., Near City Mall"
@@ -358,11 +384,10 @@ const ReportDamage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Ward Number *</Label>
+                      <Label>Ward Number (Optional)</Label>
                       <Select
                         value={formData.ward}
                         onValueChange={(value) => handleInputChange("ward", value)}
-                        required
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select ward" />
@@ -423,6 +448,79 @@ const ReportDamage = () => {
         onClose={() => setIsCameraOpen(false)}
         onCapture={handleImageCapture}
       />
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-success/20">
+                <CheckCircle2 className="h-8 w-8 text-success" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-2xl">
+              Complaint Submitted Successfully!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Your complaint has been registered. Save this ID to track your complaint status.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Complaint ID Display */}
+            <div className="p-4 bg-muted rounded-lg">
+              <Label className="text-xs text-muted-foreground mb-2 block">
+                Your Complaint ID
+              </Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-sm font-mono bg-background p-2 rounded border break-all">
+                  {submittedComplaintId}
+                </code>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={copyToClipboard}
+                  className="shrink-0"
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4 text-success" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Info Message */}
+            <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <p className="text-sm text-foreground">
+                <strong>Note:</strong> {formData.phone || formData.email
+                  ? "You can track your complaint using this ID or your contact information."
+                  : "Use this ID to track your complaint status anytime."}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowSuccessDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Submit Another
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSuccessDialog(false);
+                navigate("/track");
+              }}
+              className="w-full sm:w-auto"
+            >
+              Track Complaint
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

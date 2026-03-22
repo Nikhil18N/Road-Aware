@@ -21,7 +21,7 @@ async function createComplaint(req, res) {
       );
     }
 
-    const { latitude, longitude, description } = req.body;
+    const { latitude, longitude, description, name, phone, email } = req.body;
     const imageFile = req.file;
 
     // Validate image file exists
@@ -63,6 +63,9 @@ async function createComplaint(req, res) {
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
       description: description || null,
+      reporter_name: name || null,
+      reporter_phone: phone || null,
+      reporter_email: email || null,
       status: 'processing',
       potholes_detected: null,
       severity: null,
@@ -224,10 +227,43 @@ async function getStats(req, res) {
   }
 }
 
+/**
+ * Get complaints by contact (phone or email)
+ * GET /complaints/contact/:contact
+ */
+async function getComplaintsByContact(req, res) {
+  try {
+    const { contact } = req.params;
+
+    if (!contact || !contact.trim()) {
+      return errorResponse(res, 'Contact information is required', 400);
+    }
+
+    const result = await complaintService.getComplaintsByContact(contact.trim());
+
+    if (!result.success) {
+      return errorResponse(res, 'Failed to fetch complaints', 500);
+    }
+
+    return successResponse(
+      res,
+      {
+        complaints: result.data,
+        count: result.count
+      },
+      'Complaints fetched successfully'
+    );
+  } catch (error) {
+    console.error('Error in getComplaintsByContact controller:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
   getComplaintById,
   updateComplaintStatus,
-  getStats
+  getStats,
+  getComplaintsByContact
 };

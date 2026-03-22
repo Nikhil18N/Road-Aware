@@ -3,10 +3,12 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Clock, User, FileText, CheckCircle2, AlertCircle, Wrench, ClipboardCheck } from "lucide-react";
-import { getComplaintById } from "@/services/api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, MapPin, Clock, User, FileText, CheckCircle2, AlertCircle, Wrench, ClipboardCheck, Phone, Mail, Lock, List } from "lucide-react";
+import { getComplaintById, getComplaintsByContact } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface ComplaintDetails {
@@ -79,23 +81,117 @@ const mockComplaint: ComplaintDetails = {
 
 const TrackComplaint = () => {
   const { toast } = useToast();
+  const [trackingMode, setTrackingMode] = useState<"anonymous" | "verified" | "mycomplaints">("anonymous");
   const [searchId, setSearchId] = useState("");
+  const [verificationContact, setVerificationContact] = useState("");
+  const [myComplaintsContact, setMyComplaintsContact] = useState("");
   const [complaint, setComplaint] = useState<ComplaintDetails | null>(null);
+  const [complaintsList, setComplaintsList] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchId.trim()) return;
+  const handleSearchByContact = async () => {
+    if (!myComplaintsContact.trim()) {
+      toast({
+        title: "Contact Required",
+        description: "Please enter your phone number or email.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSearching(true);
     setNotFound(false);
     setComplaint(null);
+    setComplaintsList([]);
+
+    try {
+      const result = await getComplaintsByContact(myComplaintsContact.trim());
+
+      if (result.success && result.data) {
+        if (result.data.count === 0) {
+          setNotFound(true);
+          toast({
+            title: "No Complaints Found",
+            description: "No complaints found with this contact information.",
+            variant: "destructive",
+          });
+        } else {
+          setComplaintsList(result.data.complaints);
+          toast({
+            title: "Success",
+            description: `Found ${result.data.count} complaint(s)`,
+          });
+        }
+      } else {
+        setNotFound(true);
+        toast({
+          title: "Search Failed",
+          description: result.message || "Failed to search complaints.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error searching complaints:', error);
+      toast({
+        title: "Error",
+        description: "Failed to search complaints.",
+        variant: "destructive",
+      });
+      setNotFound(true);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchId.trim()) return;
+
+    // For verified mode, check if verification contact is provided
+    if (trackingMode === "verified" && !verificationContact.trim()) {
+      toast({
+        title: "Verification Required",
+        description: "Please enter your phone number or email for verified tracking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    setNotFound(false);
+    setComplaint(null);
+    setShowVerifiedInfo(false);
 
     try {
       const result = await getComplaintById(searchId.trim());
 
       if (result.success && result.data) {
+        // Check verification if in verified mode
+        if (trackingMode === "verified") {
+          const data = result.data;
+          const contactMatches =
+            (data.reporter_phone && data.reporter_phone === verificationContact.trim()) ||
+            (data.reporter_email && data.reporter_email.toLowerCase() === verificationContact.trim().toLowerCase());
+
+          if (!contactMatches) {
+            toast({
+              title: "Verification Failed",
+              description: "The contact information does not match our records.",
+              variant: "destructive",
+            });
+            setNotFound(true);
+            setIsSearching(false);
+            return;
+          }
+
+          setShowVerifiedInfo(true);
+          toast({
+            title: "Verification Successful",
+            description: "Your complaint has been verified. Showing full details.",
+          });
+        }
+
         // Transform backend data to component format
         const formattedComplaint: ComplaintDetails = {
           id: result.data.id,
@@ -104,7 +200,7 @@ const TrackComplaint = () => {
           status: result.data.status,
           location: `${result.data.latitude}, ${result.data.longitude}`,
           ward: "N/A", // Backend doesn't have ward info
-          reportedBy: "Citizen", // Backend doesn't store reporter name
+          reportedBy: showVerifiedInfo && result.data.reporter_name ? result.data.reporter_name : "Citizen",
           reportedAt: new Date(result.data.created_at).toLocaleString(),
           assignedTo: null, // Backend doesn't have assignment yet
           timeline: [
@@ -137,7 +233,7 @@ const TrackComplaint = () => {
         });
       }
     } catch (error) {
-      console.error(' Error fetching complaint:', error);
+      console.error('Error fetching complaint:', error);
       toast({
         title: "Error",
         description: "Failed to fetch complaint details.",
@@ -181,32 +277,149 @@ const TrackComplaint = () => {
             </p>
           </div>
 
-          {/* Search Form */}
+          {/* Search Form with Tabs */}
           <Card className="mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSearch} className="flex gap-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Enter Complaint ID (e.g., SMC-2026-001234)"
-                    value={searchId}
-                    onChange={(e) => setSearchId(e.target.value)}
-                    className="h-12 text-base"
-                  />
-                </div>
-                <Button type="submit" size="lg" disabled={isSearching}>
-                  {isSearching ? (
-                    <>
-                      <span className="animate-spin mr-2">⏳</span>
-                      Searching...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-5 w-5 mr-2" />
-                      Track
-                    </>
-                  )}
-                </Button>
-              </form>
+            <CardHeader>
+              <CardTitle className="text-lg">Track Your Complaint</CardTitle>
+              <CardDescription>
+                Enter your complaint ID. Add contact info for full details.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={trackingMode} onValueChange={(value) => setTrackingMode(value as "anonymous" | "verified" | "mycomplaints")}>
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="anonymous">
+                    <Search className="h-4 w-4 mr-2" />
+                    Quick Track
+                  </TabsTrigger>
+                  <TabsTrigger value="verified">
+                    <Lock className="h-4 w-4 mr-2" />
+                    Verified
+                  </TabsTrigger>
+                  <TabsTrigger value="mycomplaints">
+                    <List className="h-4 w-4 mr-2" />
+                    My Complaints
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Anonymous Tracking */}
+                <TabsContent value="anonymous" className="space-y-4">
+                  <div>
+                    <Label htmlFor="complaint-id">Complaint ID</Label>
+                    <Input
+                      id="complaint-id"
+                      placeholder="e.g., abc123-def456-ghi789"
+                      value={searchId}
+                      onChange={(e) => setSearchId(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSearch}
+                    className="w-full"
+                    disabled={isSearching || !searchId.trim()}
+                  >
+                    {isSearching ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-5 w-5 mr-2" />
+                        Track Complaint
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Limited info available without verification
+                  </p>
+                </TabsContent>
+
+                {/* Verified Tracking */}
+                <TabsContent value="verified" className="space-y-4">
+                  <div>
+                    <Label htmlFor="complaint-id-verified">Complaint ID</Label>
+                    <Input
+                      id="complaint-id-verified"
+                      placeholder="e.g., abc123-def456-ghi789"
+                      value={searchId}
+                      onChange={(e) => setSearchId(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="verification">Phone or Email</Label>
+                    <div className="relative mt-2">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="verification"
+                        placeholder="Phone number or email used while reporting"
+                        value={verificationContact}
+                        onChange={(e) => setVerificationContact(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSearch}
+                    className="w-full"
+                    disabled={isSearching || !searchId.trim() || !verificationContact.trim()}
+                  >
+                    {isSearching ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-5 w-5 mr-2" />
+                        Verify & Track
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Full details including contact info will be shown
+                  </p>
+                </TabsContent>
+
+                {/* My Complaints - View all by contact */}
+                <TabsContent value="mycomplaints" className="space-y-4">
+                  <div>
+                    <Label htmlFor="my-contact">Phone or Email</Label>
+                    <div className="relative mt-2">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="my-contact"
+                        placeholder="Enter your phone number or email"
+                        value={myComplaintsContact}
+                        onChange={(e) => setMyComplaintsContact(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSearchByContact}
+                    className="w-full"
+                    disabled={isSearching || !myComplaintsContact.trim()}
+                  >
+                    {isSearching ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <List className="h-5 w-5 mr-2" />
+                        View My Complaints
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    See all complaints submitted with this contact info
+                  </p>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
@@ -228,6 +441,43 @@ const TrackComplaint = () => {
           {/* Complaint Details */}
           {complaint && (
             <div className="space-y-6 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+              {/* Verification Badge */}
+              {showVerifiedInfo && (
+                <Card className="bg-success/10 border-success">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-success/20">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-success">Verified Tracking</p>
+                        <p className="text-sm text-muted-foreground">
+                          Showing full details with contact information
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!showVerifiedInfo && trackingMode === "anonymous" && (
+                <Card className="bg-warning/10 border-warning">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-warning/20">
+                        <AlertCircle className="h-5 w-5 text-warning" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-warning">Limited Information</p>
+                        <p className="text-sm text-muted-foreground">
+                          Use "Verified Track" with your contact info for full details
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Status Card */}
               <Card>
                 <CardHeader>
@@ -337,6 +587,99 @@ const TrackComplaint = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* My Complaints List */}
+          {complaintsList.length > 0 && (
+            <div className="space-y-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+              <Card className="bg-success/10 border-success">
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-success/20">
+                      <CheckCircle2 className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-success">
+                        Found {complaintsList.length} Complaint{complaintsList.length > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        All complaints submitted with {myComplaintsContact}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {complaintsList.map((item, index) => (
+                <Card key={item.id} className="animate-slide-up" style={{ animationDelay: `${0.1 * (index + 1)}s` }}>
+                  <CardHeader>
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-lg font-mono">{item.id}</CardTitle>
+                        <CardDescription className="mt-1">
+                          Reported on {new Date(item.created_at).toLocaleDateString()}
+                        </CardDescription>
+                      </div>
+                      <Badge className={`${getStatusColor(item.status)} px-3 py-1 text-xs`}>
+                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-foreground">Location</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Clock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-foreground">Status</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.status === 'analyzed'
+                              ? `${item.potholes_detected || 0} potholes detected`
+                              : item.status === 'processing'
+                              ? 'Image analysis in progress'
+                              : 'Pending review'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {item.severity && (
+                      <div className="p-2 bg-muted/50 rounded text-center">
+                        <Badge variant="outline">
+                          Severity: {item.severity}
+                        </Badge>
+                      </div>
+                    )}
+                    {item.description && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">{item.description}</p>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={() => {
+                        setSearchId(item.id);
+                        setVerificationContact(myComplaintsContact);
+                        setTrackingMode("verified");
+                        setComplaintsList([]);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      View Full Details
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>

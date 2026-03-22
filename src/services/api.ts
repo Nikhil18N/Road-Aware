@@ -18,6 +18,9 @@ export interface Complaint {
   latitude: number;
   longitude: number;
   description?: string;
+  reporter_name?: string;
+  reporter_phone?: string;
+  reporter_email?: string;
   potholes_detected?: number;
   severity?: 'Low' | 'Medium' | 'High';
   largest_pothole_area?: number;
@@ -51,7 +54,10 @@ export async function createComplaint(
   imageFile: File,
   latitude: number,
   longitude: number,
-  description?: string
+  description?: string,
+  name?: string,
+  phone?: string,
+  email?: string
 ): Promise<ApiResponse<Complaint>> {
   try {
     const formData = new FormData();
@@ -60,6 +66,15 @@ export async function createComplaint(
     formData.append('longitude', longitude.toString());
     if (description) {
       formData.append('description', description);
+    }
+    if (name) {
+      formData.append('name', name);
+    }
+    if (phone) {
+      formData.append('phone', phone);
+    }
+    if (email) {
+      formData.append('email', email);
     }
 
     const response = await fetch(`${API_BASE_URL}/complaints`, {
@@ -179,6 +194,31 @@ export async function updateComplaintStatus(
     return data;
   } catch (error) {
     console.error('Error updating status:', error);
+    return {
+      success: false,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+}
+
+/**
+ * Get complaints by contact (phone or email)
+ */
+export async function getComplaintsByContact(contact: string): Promise<ApiResponse<{ complaints: Complaint[]; count: number }>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/complaints/contact/${encodeURIComponent(contact)}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || 'Failed to fetch complaints',
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching complaints by contact:', error);
     return {
       success: false,
       message: 'Network error. Please check your connection.',
