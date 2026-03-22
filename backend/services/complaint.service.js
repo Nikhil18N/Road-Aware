@@ -59,10 +59,10 @@ async function getAllComplaints(filters = {}) {
       query = query.eq('severity', filters.severity);
     }
 
-    // Apply pagination
-    if (filters.limit) {
-      query = query.limit(filters.limit);
-    }
+      // Apply assigned_to filter
+      if (filters.assigned_to) {
+        query = query.eq('assigned_to', filters.assigned_to);
+      }
 
     if (filters.offset) {
       query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);

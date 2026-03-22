@@ -120,9 +120,9 @@ async function createComplaint(req, res) {
  */
 async function getAllComplaints(req, res) {
   try {
-    const { status, severity, limit, offset, my } = req.query;
+    const { status, severity, limit, offset, my, assigned_to } = req.query;
     const user = req.user;
-    
+
     const filters = {
       status,
       severity,
@@ -134,7 +134,12 @@ async function getAllComplaints(req, res) {
     if (my === 'true' && user) {
        filters.user_id = user.id;
     }
-    
+
+    // Filter by assigned_to
+    if (assigned_to) {
+        filters.assigned_to = assigned_to;
+    }
+
     const result = await complaintService.getAllComplaints(filters);
 
     if (!result.success) {
