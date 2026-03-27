@@ -127,6 +127,119 @@ const UserProfile = () => {
     updateProfileMutation.mutate(profileData);
   };
 
+  const handleExportCSV = () => {
+    if (complaints.length === 0) {
+      toast({
+        title: "No data",
+        description: "You have no complaints to export",
+      });
+      return;
+    }
+
+    const headers = ['ID', 'Date', 'Status', 'Severity', 'Location', 'Description'];
+    const rows = complaints.map((complaint) => [
+      complaint.id.substring(0, 8),
+      new Date(complaint.created_at).toLocaleDateString(),
+      complaint.status,
+      complaint.severity || 'N/A',
+      `${complaint.latitude.toFixed(4)}, ${complaint.longitude.toFixed(4)}`,
+      `"${(complaint.description || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `my-reports-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: "Reports exported as CSV",
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (complaints.length === 0) {
+      toast({
+        title: "No data",
+        description: "You have no complaints to export",
+      });
+      return;
+    }
+
+    // Generate simple PDF content as HTML then print to PDF
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Road Aware - My Reports</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .footer { margin-top: 40px; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>Road Aware - My Reports</h1>
+          <p>Generated on ${new Date().toLocaleDateString()}</p>
+          <p>Total Reports: ${complaints.length}</p>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Severity</th>
+                <th>Location</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${complaints.map(c => `
+                <tr>
+                  <td>${c.id.substring(0, 8)}</td>
+                  <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                  <td>${c.status}</td>
+                  <td>${c.severity || 'N/A'}</td>
+                  <td>${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}</td>
+                  <td>${c.description || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            <p>This report contains your submitted complaints and their current status.</p>
+            <p>Powered by Road Aware © 2026</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `my-reports-${new Date().toISOString().split('T')[0]}.html`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: "Reports exported as PDF (opens in browser - use print to save)",
+    });
+  };
+
   const handleNotificationChange = (key: keyof typeof notifications) => {
     const updatedNotifications = {
       ...notifications,
@@ -520,11 +633,11 @@ const UserProfile = () => {
                       Download a copy of all your submitted reports and their statuses
                     </p>
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1">
+                      <Button variant="outline" className="flex-1" onClick={handleExportCSV}>
                         <Download className="mr-2 h-4 w-4" />
                         Export as CSV
                       </Button>
-                      <Button variant="outline" className="flex-1">
+                      <Button variant="outline" className="flex-1" onClick={handleExportPDF}>
                         <Download className="mr-2 h-4 w-4" />
                         Export as PDF
                       </Button>

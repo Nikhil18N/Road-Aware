@@ -39,6 +39,7 @@ export interface Complaint {
   reporter_phone?: string;
   reporter_email?: string;
   potholes_detected?: number;
+  potholes_count?: number; // Alias for potholes_detected
   severity?: 'Low' | 'Medium' | 'High' | 'Critical'; // Matches both DB (lowercase usually) and API. Let's be flexible.
   largest_pothole_area?: number;
   status: 'processing' | 'analyzed' | 'failed' | 'pending' | 'resolved' | 'rejected' | 'in_progress';
@@ -46,6 +47,7 @@ export interface Complaint {
   created_at: string;
   updated_at: string;
   resolved_at?: string;
+  resolution_image_url?: string; // Worker proof-of-work image
 }
 
 export interface ComplaintStats {

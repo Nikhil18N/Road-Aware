@@ -245,16 +245,9 @@ async function updateComplaintStatus(req, res) {
       return errorResponse(res, 'Failed to update status', 500);
     }
     
-    // Send email notification if status updated successfully
-    if (existingComplaint.data.reporter_email) {
-      const emailData = {
-        email: existingComplaint.data.reporter_email,
-        name: existingComplaint.data.reporter_name,
-        id: existingComplaint.data.id
-      };
-      mailService.sendStatusChangeEmail(emailData, status).catch(err => {
-        console.error('Failed to send status change email:', err.message);
-      });
+    // Send email notification if status updated successfully and mail is present
+    if (existingComplaint.data.email && existingComplaint.data.status !== status) {
+      mailService.sendStatusChangeEmail(existingComplaint.data, status);
     }
 
     return successResponse(res, result.data, 'Status updated successfully');
@@ -506,86 +499,94 @@ async function addComment(req, res) {
 }
 
 /**
- * Export complaints as CSV
- * GET /api/complaints/export/csv
+ * Export complaints as CSV (Admin Only)
  */
-async function exportAsCSV(req, res) {
+async function exportComplaintsCSV(req, res) {
   try {
-    const { status, severity, department_id, start_date, end_date } = req.query;
+    // Check admin role
+    if (req.user?.user_metadata?.role !== 'admin') {
+      return errorResponse(res, 'Only admins can export data', 403);
+    }
 
+    // Extract filters from query
     const filters = {
-      status,
-      severity,
-      department_id,
-      start_date,
-      end_date
+      status: req.query.status,
+      severity: req.query.severity,
+      department_id: req.query.department_id ? parseInt(req.query.department_id) : undefined,
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
     };
 
     const result = await exportService.exportComplaintsAsCSV(filters);
 
-    if (!result.success) {
-      return errorResponse(res, result.error || 'Failed to export complaints', 500);
-    }
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
+    res.setHeader('Content-Disposition', `attachment;filename="${result.filename}"`);
     res.send(result.data);
   } catch (error) {
-    console.error('Error in exportAsCSV:', error);
-    return errorResponse(res, 'Failed to export as CSV', 500);
+    console.error('Error in exportComplaintsCSV:', error);
+    return errorResponse(res, error.message || 'Failed to export CSV', 500);
   }
 }
 
 /**
- * Export complaints as PDF
- * GET /api/complaints/export/pdf
+ * Export complaints as PDF (Admin Only)
  */
-async function exportAsPDF(req, res) {
+async function exportComplaintsPDF(req, res) {
   try {
-    const { status, severity, department_id, start_date, end_date } = req.query;
+    // Check admin role
+    if (req.user?.user_metadata?.role !== 'admin') {
+      return errorResponse(res, 'Only admins can export data', 403);
+    }
 
+    // Extract filters from query
     const filters = {
-      status,
-      severity,
-      department_id,
-      start_date,
-      end_date
+      status: req.query.status,
+      severity: req.query.severity,
+      department_id: req.query.department_id ? parseInt(req.query.department_id) : undefined,
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
     };
 
     const result = await exportService.exportComplaintsAsPDF(filters);
 
-    if (!result.success) {
-      return errorResponse(res, result.error || 'Failed to export complaints', 500);
-    }
-
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.setHeader('Content-Disposition', 'attachment;filename="complaints-export.pdf"');
     res.send(result.data);
   } catch (error) {
-    console.error('Error in exportAsPDF:', error);
-    return errorResponse(res, 'Failed to export as PDF', 500);
+    console.error('Error in exportComplaintsPDF:', error);
+    return errorResponse(res, error.message || 'Failed to export PDF', 500);
   }
 }
 
 /**
- * Export department analytics as CSV
- * GET /api/complaints/export/analytics
+ * Export analytics data (Admin Only)
  */
-async function exportAnalyticsAsCSV(req, res) {
+async function exportAnalytics(req, res) {
   try {
-    const { department_id } = req.query;
-
-    const result = await exportService.exportDepartmentAnalyticsAsCSV(department_id);
-
-    if (!result.success) {
-      return errorResponse(res, result.error || 'Failed to export analytics', 500);
+    // Check admin role
+    if (req.user?.user_metadata?.role !== 'admin') {
+      return errorResponse(res, 'Only admins can export data', 403);
     }
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
-    res.send(result.data);
+    // Get analytics data
+    const statsResult = await complaintService.getComplaintStats();
+    const deptResult = await complaintService.getDepartmentStats();
+
+    if (!statsResult.success || !deptResult.success) {
+      return errorResponse(res, 'Failed to compile analytics', 500);
+    }
+
+    const analyticsData = {
+      generated_at: new Date().toISOString(),
+      summary: statsResult.data,
+      department_stats: deptResult.data
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment;filename="analytics.json"');
+    res.send(JSON.stringify(analyticsData, null, 2));
   } catch (error) {
-    console.error('Error in exportAnalyticsAsCSV:', error);
+    console.error('Error in exportAnalytics:', error);
     return errorResponse(res, 'Failed to export analytics', 500);
   }
 }
@@ -603,7 +604,7 @@ module.exports = {
   resolveComplaint,
   getComments,
   addComment,
-  exportAsCSV,
-  exportAsPDF,
-  exportAnalyticsAsCSV
+  exportComplaintsCSV,
+  exportComplaintsPDF,
+  exportAnalytics
 };

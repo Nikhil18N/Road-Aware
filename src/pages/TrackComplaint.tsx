@@ -25,7 +25,6 @@ interface ComplaintDetails {
   reportedAt: string;
   assignedTo: string | null;
   image_url?: string;
-  resolution_image_url?: string;
   timeline: {
     status: string;
     date: string;
@@ -99,8 +98,7 @@ const TrackComplaint = () => {
           reportedAt: format(new Date(data.created_at), 'PPP p'),
           assignedTo: null,
           image_url: data.image_url,
-          resolution_image_url: data.resolution_image_url,
-          timeline: timeline,
+          timeline: timeline
         };
         
         setComplaint(formattedComplaint);
@@ -189,13 +187,11 @@ const TrackComplaint = () => {
                             </CardTitle>
                             <CardDescription>ID: {complaint.id}</CardDescription>
                         </div>
-                       </CardHeader>
-                       <CardContent className="space-y-6 pt-6">
-                          {complaint.image_url && (
-                             <div className="mb-6 rounded-md overflow-hidden border">
-                               <img src={complaint.image_url} alt="Evidence" className="w-full max-h-96 object-contain bg-muted" />
-                             </div>
-                          )}
+                        {complaint.image_url && (
+                             <img src={complaint.image_url} alt="Evidence" className="h-16 w-16 object-cover rounded-md border" />
+                        )}
+                     </CardHeader>
+                     <CardContent className="space-y-6 pt-6">
                         <div className="grid md:grid-cols-2 gap-4">
                              <div className="space-y-1">
                                 <Label className="text-muted-foreground text-xs uppercase tracking-wider">Severity</Label>
@@ -240,12 +236,6 @@ const TrackComplaint = () => {
                                             <span className="font-semibold text-sm">{event.status}</span>
                                             <span className="text-xs text-muted-foreground">{event.date}</span>
                                             <span className="text-sm text-muted-foreground mt-0.5">{event.description}</span>
-                                            {event.status === 'Resolved' && complaint.resolution_image_url && (
-                                              <div className="mt-2 rounded-md overflow-hidden border max-w-sm">
-                                                <img src={complaint.resolution_image_url} alt="Resolution Evidence" className="w-full h-auto object-cover" />
-                                                <div className="bg-muted p-2 text-xs font-medium text-center">Proof of Resolution</div>
-                                              </div>
-                                            )}
                                         </div>
                                     </div>
                                 ))}

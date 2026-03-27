@@ -499,7 +499,7 @@ async function autoAssignDepartment(damageType, severity) {
  */
 async function getComments(complaintId) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('complaint_comments')
       .select('*')
       .eq('complaint_id', complaintId)
@@ -518,7 +518,7 @@ async function getComments(complaintId) {
  */
 async function addComment(commentData) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('complaint_comments')
       .insert([commentData])
       .select()

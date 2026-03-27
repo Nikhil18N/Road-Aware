@@ -121,20 +121,20 @@ const AdminDashboard = () => {
   };
 
   const exportToCSV = () => {
-    if (!complaintsData?.data.length) return;
+    if (!complaintsData?.data?.length) return;
     
     // Create CSV header
     const headers = ['ID', 'Date', 'Status', 'Severity', 'Location', 'Description', 'Pothole Count'];
     
     // Create CSV rows
     const rows = complaintsData.data.map((report: Complaint) => [
-      report.id,
+      report.id.substring(0, 8),
       new Date(report.created_at).toLocaleDateString(),
       report.status,
       report.severity || 'N/A',
-      `${report.latitude}, ${report.longitude}`,
+      `${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}`,
       `"${(report.description || '').replace(/"/g, '""')}"`, // escape quotes
-      report.potholes_count || 0
+      report.potholes_detected || 0
     ]);
     
     // Combine header and rows
@@ -173,11 +173,11 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 className="gap-2"
                 onClick={exportToCSV}
-                disabled={!complaintsData?.data?.length}
+                disabled={!complaintsData?.data.length}
               >
                 <Download className="h-4 w-4" />
                 Export Data
