@@ -22,12 +22,15 @@ import {
 import { getAllComplaints, Complaint, updateComplaintStatus } from "@/services/api";
 import ComplaintMap from "@/components/map/ComplaintMap";
 import { useToast } from "@/hooks/use-toast";
+import { ResolveDialog } from "@/components/dashboard/ResolveDialog";
 
 const WorkerDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
+  const [resolveComplaintId, setResolveComplaintId] = useState<string | null>(null);
 
   // Fetch complaints assigned to this worker
   const { data: complaintsData, isLoading, refetch } = useQuery({
@@ -85,6 +88,12 @@ const WorkerDashboard = () => {
   ];
 
   const handleStatusUpdate = async (complaintId: string, newStatus: string) => {
+    if (newStatus === 'resolved') {
+      setResolveComplaintId(complaintId);
+      setResolveDialogOpen(true);
+      return;
+    }
+
     try {
       setUpdatingId(complaintId);
       const result = await updateComplaintStatus(complaintId, newStatus);
@@ -346,6 +355,14 @@ const WorkerDashboard = () => {
         </div>
       </main>
       <Footer />
+      {resolveComplaintId && (
+        <ResolveDialog 
+          open={resolveDialogOpen}
+          onOpenChange={setResolveDialogOpen}
+          complaintId={resolveComplaintId}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 };

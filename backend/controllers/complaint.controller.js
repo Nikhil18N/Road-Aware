@@ -383,6 +383,59 @@ async function assignToDepartment(req, res) {
   }
 }
 
+/**
+ * Resolve complaint with a proof image
+ * POST /api/complaints/:id/resolve
+ */
+async function resolveComplaint(req, res) {
+  try {
+    const { id } = req.params;
+    
+    // Check if complaint exists first
+    const existingComplaint = await complaintService.getComplaintById(id);
+    if (!existingComplaint.success) {
+      return errorResponse(res, 'Complaint not found', 404);
+    }
+
+    if (!req.file) {
+      return errorResponse(res, 'Resolution image is required', 400);
+    }
+
+    // Upload image to storage
+    const uploadResult = await storageService.uploadImage(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+
+    if (!uploadResult.success) {
+      return errorResponse(res, 'Failed to upload resolution image', 500);
+    }
+
+    // Update complaint
+    const updates = {
+      status: 'resolved',
+      resolution_image_url: uploadResult.publicUrl
+    };
+
+    const result = await complaintService.updateComplaint(id, updates);
+
+    if (!result.success) {
+      return errorResponse(res, 'Failed to resolve complaint', 500);
+    }
+
+    // Send email notification
+    if (existingComplaint.data.email) {
+      mailService.sendStatusChangeEmail(existingComplaint.data, 'resolved');
+    }
+
+    return successResponse(res, result.data, 'Complaint resolved successfully');
+  } catch (error) {
+    console.error('Error in resolveComplaint:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -392,5 +445,6 @@ module.exports = {
   getComplaintsByContact,
   getDepartmentAnalytics,
   assignToDepartment,
-  getDepartments
+  getDepartments,
+  resolveComplaint
 };

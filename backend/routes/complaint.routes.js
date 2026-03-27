@@ -173,6 +173,19 @@ router.patch(
 );
 
 /**
+ * @route   POST /api/complaints/:id/resolve
+ * @desc    Resolve complaint with a proof image
+ * @access  Protected (Worker, Admin)
+ */
+router.post(
+  '/:id/resolve',
+  authenticate(false),
+  authorize(['worker', 'admin']),
+  upload.single('image'),
+  complaintController.resolveComplaint
+);
+
+/**
  * @route   PUT /api/complaints/:id/assign-department
  * @desc    Assign complaint to a department
  * @access  Protected (Admin, Worker)

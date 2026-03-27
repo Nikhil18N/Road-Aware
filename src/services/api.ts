@@ -262,11 +262,52 @@ export async function updateComplaintStatus(
   }
 }
 
-export async function getStats(): Promise<ApiResponse<ComplaintStats>> {
+  /**
+   * Resolve complaint with a proof image (worker action)
+   */
+  export async function resolveComplaint(
+    id: string,
+    image: File
+  ): Promise<ApiResponse<Complaint>> {
+    try {
+      const authHeaders = await getAuthHeaders();
+      
+      const formData = new FormData();
+      formData.append('image', image);
+
+      const response = await fetch(`${API_BASE_URL}/complaints/${id}/resolve`, {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          // FormData auto-sets the Content-Type boundary
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Failed to resolve complaint',
+        };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error resolving complaint:', error);
+      return {
+        success: false,
+        message: 'Network error. Please check your connection.',
+      };
+    }
+  }
+
+export async function getStats(): Promise<ApiResponse<any>> {
   try {
     const response = await fetch(`${API_BASE_URL}/complaints/stats`);
     const data = await response.json();
-    
+
     if (!response.ok) return { success: false, message: 'Failed to fetch stats' };
     return data;
   } catch (error) {
