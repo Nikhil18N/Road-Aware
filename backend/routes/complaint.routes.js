@@ -78,7 +78,7 @@ const updateStatusValidation = [
     .withMessage('Status must be a string')
     .custom((value) => {
       if (!isValidStatus(value)) {
-        throw new Error('Invalid status value. Must be one of: processing, analyzed, failed, pending, resolved');
+        throw new Error('Invalid status value. Must be one of: processing, analyzed, failed, pending, resolved, in_progress, rejected');
       }
       return true;
     })

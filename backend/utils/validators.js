@@ -45,7 +45,7 @@ function isValidCoordinates(latitude, longitude) {
  * @returns {boolean} True if valid
  */
 function isValidSeverity(severity) {
-  return ['Low', 'Medium', 'High'].includes(severity);
+  return ['Low', 'Medium', 'High', 'Critical'].includes(severity);
 }
 
 /**
@@ -54,7 +54,7 @@ function isValidSeverity(severity) {
  * @returns {boolean} True if valid
  */
 function isValidStatus(status) {
-  return ['processing', 'analyzed', 'failed', 'pending', 'resolved'].includes(status);
+  return ['processing', 'analyzed', 'failed', 'pending', 'resolved', 'in_progress', 'rejected'].includes(status);
 }
 
 /**
