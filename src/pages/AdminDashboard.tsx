@@ -121,13 +121,13 @@ const AdminDashboard = () => {
   };
 
   const exportToCSV = () => {
-    if (!complaintsData?.data?.length) return;
+    if (!complaintsData?.complaints?.length) return;
     
     // Create CSV header
     const headers = ['ID', 'Date', 'Status', 'Severity', 'Location', 'Description', 'Pothole Count'];
     
     // Create CSV rows
-    const rows = complaintsData.data.map((report: Complaint) => [
+    const rows = complaintsData.complaints.map((report: Complaint) => [
       report.id.substring(0, 8),
       new Date(report.created_at).toLocaleDateString(),
       report.status,
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
                 variant="outline" 
                 className="gap-2"
                 onClick={exportToCSV}
-                disabled={!complaintsData?.data.length}
+                disabled={!complaints.length}
               >
                 <Download className="h-4 w-4" />
                 Export Data
