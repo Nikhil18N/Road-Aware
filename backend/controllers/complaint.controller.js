@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 const complaintService = require('../services/complaint.service');
 const storageService = require('../services/storage.service');
 const mlService = require('../services/ml.service');
+const mailService = require('../services/mail.service');
 const { successResponse, errorResponse, formatValidationErrors } = require('../utils/response');
 
 /**
@@ -112,6 +113,11 @@ async function createComplaint(req, res) {
     ).catch(error => {
       console.error('Background ML processing error:', error);
     });
+    
+    // Send creation email if email is provided
+    if (complaint.email) {
+      mailService.sendComplaintCreatedEmail(complaint);
+    }
 
     // Return immediate response with complaint ID
     return successResponse(
@@ -236,6 +242,11 @@ async function updateComplaintStatus(req, res) {
 
     if (!result.success) {
       return errorResponse(res, 'Failed to update status', 500);
+    }
+    
+    // Send email notification if status updated successfully and mail is present
+    if (existingComplaint.data.email && existingComplaint.data.status !== status) {
+      mailService.sendStatusChangeEmail(existingComplaint.data, status);
     }
 
     return successResponse(res, result.data, 'Status updated successfully');
