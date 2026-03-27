@@ -186,6 +186,28 @@ router.post(
 );
 
 /**
+ * @route   GET /api/complaints/:id/comments
+ * @desc    Get comments for a complaint
+ * @access  Public
+ */
+router.get(
+  '/:id/comments',
+  complaintController.getComments
+);
+
+/**
+ * @route   POST /api/complaints/:id/comments
+ * @desc    Add a comment to a complaint
+ * @access  Protected
+ */
+router.post(
+  '/:id/comments',
+  authenticate(false),
+  body('content').notEmpty().withMessage('Content is required'),
+  complaintController.addComment
+);
+
+/**
  * @route   PUT /api/complaints/:id/assign-department
  * @desc    Assign complaint to a department
  * @access  Protected (Admin, Worker)

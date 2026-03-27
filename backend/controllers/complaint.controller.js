@@ -436,6 +436,67 @@ async function resolveComplaint(req, res) {
   }
 }
 
+/**
+ * Get comments for a complaint
+ */
+async function getComments(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await complaintService.getComments(id);
+
+    if (!result.success) {
+      return errorResponse(res, 'Failed to fetch comments', 500);
+    }
+
+    return successResponse(res, result.data, 'Comments fetched successfully');
+  } catch (error) {
+    console.error('Error in getComments:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
+/**
+ * Add a comment to a complaint
+ */
+async function addComment(req, res) {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return errorResponse(res, 'Validation failed', 400, formatValidationErrors(errors.array()));
+    }
+
+    const { id } = req.params;
+    const { content } = req.body;
+    
+    // Auth middleware sets user ID and role
+    const userId = req.user ? req.user.id : null;
+    let userName = req.user ? (req.user.user_metadata?.full_name || req.user.user_metadata?.name || req.user.email) : 'System';
+    
+    // For workers and admins, append their role to their name
+    if (req.user && ['worker', 'admin'].includes(req.user.user_metadata?.role)) {
+      userName = `${userName} (${req.user.user_metadata.role})`;
+    }
+
+    const commentData = {
+      complaint_id: id,
+      user_id: userId,
+      user_name: userName || 'Anonymous',
+      content
+    };
+
+    const result = await complaintService.addComment(commentData);
+
+    if (!result.success) {
+      return errorResponse(res, 'Failed to add comment', 500);
+    }
+
+    return successResponse(res, result.data, 'Comment added successfully', 201);
+  } catch (error) {
+    console.error('Error in addComment:', error);
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -446,5 +507,7 @@ module.exports = {
   getDepartmentAnalytics,
   assignToDepartment,
   getDepartments,
-  resolveComplaint
+  resolveComplaint,
+  getComments,
+  addComment
 };

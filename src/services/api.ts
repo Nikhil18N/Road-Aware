@@ -367,3 +367,45 @@ export async function assignDepartment(id: string, departmentId: number): Promis
   }
 }
 
+
+export interface ComplaintComment {
+  id: string;
+  complaint_id: string;
+  user_id: string | null;
+  user_name: string;
+  content: string;
+  created_at: string;
+}
+
+export async function getComments(complaintId: string): Promise<ApiResponse<ComplaintComment[]>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/complaints/${complaintId}/comments`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error' };
+  }
+}
+
+export async function addComment(complaintId: string, content: string): Promise<ApiResponse<ComplaintComment>> {
+  try {
+    const authHeaders = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/complaints/${complaintId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
+      body: JSON.stringify({ content }),
+    });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Failed to post comment' };
+    }
+    
+    return data;
+  } catch (error) {
+    return { success: false, message: 'Network error' };
+  }
+}

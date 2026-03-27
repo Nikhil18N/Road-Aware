@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { MyComplaintsList } from "@/components/report/MyComplaintsList";
 import { format } from "date-fns";
+import { Comments } from "@/components/dashboard/Comments";
 
 interface ComplaintDetails {
   id: string;
@@ -240,6 +241,7 @@ const TrackComplaint = () => {
                                 ))}
                             </div>
                         </div>
+                        <Comments complaintId={complaint.id} />
                      </CardContent>
                 </Card>
             )}

@@ -494,6 +494,44 @@ async function autoAssignDepartment(damageType, severity) {
   }
 }
 
+/**
+ * Get comments for a complaint
+ */
+async function getComments(complaintId) {
+  try {
+    const { data, error } = await supabase
+      .from('complaint_comments')
+      .select('*')
+      .eq('complaint_id', complaintId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error in getComments:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Add a comment to a complaint
+ */
+async function addComment(commentData) {
+  try {
+    const { data, error } = await supabase
+      .from('complaint_comments')
+      .insert([commentData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error in addComment:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -505,5 +543,7 @@ module.exports = {
   getComplaintsByContact,
   getDepartmentStats,
   getAllDepartments,
-  autoAssignDepartment
+  autoAssignDepartment,
+  getComments,
+  addComment
 };
