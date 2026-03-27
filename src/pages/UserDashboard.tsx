@@ -16,6 +16,7 @@ import {
   Calendar,
   FileText,
   Image as ImageIcon,
+  Settings,
 } from "lucide-react";
 import { getAllComplaints } from "@/services/api";
 import { useNavigate } from "react-router-dom";
@@ -158,6 +159,10 @@ const UserDashboard = () => {
               <TabsTrigger value="resolved" className="gap-2">
                 <CheckCircle2 className="h-4 w-4" />
                 Resolved
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Settings
               </TabsTrigger>
             </TabsList>
 
@@ -354,6 +359,31 @@ const UserDashboard = () => {
                       No resolved reports yet
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile & Settings</CardTitle>
+                  <CardDescription>Manage your contact details and notification preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4 max-w-md">
+                    <div className="grid gap-2">
+                      <h3 className="text-sm font-medium">Contact Information</h3>
+                      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
+                        <p><strong>Role:</strong> {user?.user_metadata?.role || 'User'}</p>
+                      </div>
+                    </div>
+                    {/* Feature placeholder for future detailed profile edit */}
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => alert('Profile editing coming soon!')}>
+                      Edit Profile Info
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
