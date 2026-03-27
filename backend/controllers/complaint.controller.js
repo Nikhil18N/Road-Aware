@@ -3,6 +3,7 @@ const complaintService = require('../services/complaint.service');
 const storageService = require('../services/storage.service');
 const mlService = require('../services/ml.service');
 const mailService = require('../services/mail.service');
+const exportService = require('../services/export.service');
 const { successResponse, errorResponse, formatValidationErrors } = require('../utils/response');
 
 /**
@@ -244,9 +245,16 @@ async function updateComplaintStatus(req, res) {
       return errorResponse(res, 'Failed to update status', 500);
     }
     
-    // Send email notification if status updated successfully and mail is present
-    if (existingComplaint.data.email && existingComplaint.data.status !== status) {
-      mailService.sendStatusChangeEmail(existingComplaint.data, status);
+    // Send email notification if status updated successfully
+    if (existingComplaint.data.reporter_email) {
+      const emailData = {
+        email: existingComplaint.data.reporter_email,
+        name: existingComplaint.data.reporter_name,
+        id: existingComplaint.data.id
+      };
+      mailService.sendStatusChangeEmail(emailData, status).catch(err => {
+        console.error('Failed to send status change email:', err.message);
+      });
     }
 
     return successResponse(res, result.data, 'Status updated successfully');
@@ -497,6 +505,91 @@ async function addComment(req, res) {
   }
 }
 
+/**
+ * Export complaints as CSV
+ * GET /api/complaints/export/csv
+ */
+async function exportAsCSV(req, res) {
+  try {
+    const { status, severity, department_id, start_date, end_date } = req.query;
+
+    const filters = {
+      status,
+      severity,
+      department_id,
+      start_date,
+      end_date
+    };
+
+    const result = await exportService.exportComplaintsAsCSV(filters);
+
+    if (!result.success) {
+      return errorResponse(res, result.error || 'Failed to export complaints', 500);
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error) {
+    console.error('Error in exportAsCSV:', error);
+    return errorResponse(res, 'Failed to export as CSV', 500);
+  }
+}
+
+/**
+ * Export complaints as PDF
+ * GET /api/complaints/export/pdf
+ */
+async function exportAsPDF(req, res) {
+  try {
+    const { status, severity, department_id, start_date, end_date } = req.query;
+
+    const filters = {
+      status,
+      severity,
+      department_id,
+      start_date,
+      end_date
+    };
+
+    const result = await exportService.exportComplaintsAsPDF(filters);
+
+    if (!result.success) {
+      return errorResponse(res, result.error || 'Failed to export complaints', 500);
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error) {
+    console.error('Error in exportAsPDF:', error);
+    return errorResponse(res, 'Failed to export as PDF', 500);
+  }
+}
+
+/**
+ * Export department analytics as CSV
+ * GET /api/complaints/export/analytics
+ */
+async function exportAnalyticsAsCSV(req, res) {
+  try {
+    const { department_id } = req.query;
+
+    const result = await exportService.exportDepartmentAnalyticsAsCSV(department_id);
+
+    if (!result.success) {
+      return errorResponse(res, result.error || 'Failed to export analytics', 500);
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.data);
+  } catch (error) {
+    console.error('Error in exportAnalyticsAsCSV:', error);
+    return errorResponse(res, 'Failed to export analytics', 500);
+  }
+}
+
 module.exports = {
   createComplaint,
   getAllComplaints,
@@ -509,5 +602,8 @@ module.exports = {
   getDepartments,
   resolveComplaint,
   getComments,
-  addComment
+  addComment,
+  exportAsCSV,
+  exportAsPDF,
+  exportAnalyticsAsCSV
 };

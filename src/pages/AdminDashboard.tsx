@@ -173,11 +173,11 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="gap-2"
                 onClick={exportToCSV}
-                disabled={!complaintsData?.data.length}
+                disabled={!complaintsData?.data?.length}
               >
                 <Download className="h-4 w-4" />
                 Export Data

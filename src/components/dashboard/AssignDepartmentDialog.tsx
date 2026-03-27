@@ -93,12 +93,12 @@ export function AssignDepartmentDialog({
           <DialogTitle>Assign Department</DialogTitle>
           <DialogDescription>
             Assign this complaint to a department for handling.
-            {complaint && (
-              <div className="mt-2 text-xs text-foreground">
-                Complaint ID: {complaint.id.substring(0, 8)}...
-              </div>
-            )}
           </DialogDescription>
+          {complaint && (
+            <div className="mt-2 text-xs text-foreground">
+              Complaint ID: {complaint.id.substring(0, 8)}...
+            </div>
+          )}
         </DialogHeader>
 
         <div className="grid gap-4 py-4">

@@ -220,4 +220,43 @@ router.put(
   complaintController.assignToDepartment
 );
 
+/**
+ * @route   GET /api/complaints/export/csv
+ * @desc    Export complaints as CSV
+ * @query   status, severity, department_id, start_date, end_date
+ * @access  Protected (Admin)
+ */
+router.get(
+  '/export/csv',
+  authenticate(false),
+  authorize(['admin']),
+  complaintController.exportAsCSV
+);
+
+/**
+ * @route   GET /api/complaints/export/pdf
+ * @desc    Export complaints as PDF
+ * @query   status, severity, department_id, start_date, end_date
+ * @access  Protected (Admin)
+ */
+router.get(
+  '/export/pdf',
+  authenticate(false),
+  authorize(['admin']),
+  complaintController.exportAsPDF
+);
+
+/**
+ * @route   GET /api/complaints/export/analytics
+ * @desc    Export department analytics as CSV
+ * @query   department_id
+ * @access  Protected (Admin)
+ */
+router.get(
+  '/export/analytics',
+  authenticate(false),
+  authorize(['admin']),
+  complaintController.exportAnalyticsAsCSV
+);
+
 module.exports = router;

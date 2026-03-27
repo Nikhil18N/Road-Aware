@@ -12,6 +12,7 @@ import PublicMap from "./pages/PublicMap";
 import AdminDashboard from "./pages/AdminDashboard";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import UserDashboard from "./pages/UserDashboard";
+import UserProfile from "./pages/UserProfile";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import NotFound from "./pages/NotFound";
@@ -48,6 +49,11 @@ const App = () => (
             {/* User Dashboard */}
             <Route element={<ProtectedRoute allowedRoles={['user']} />}>
               <Route path="/dashboard" element={<UserDashboard />} />
+            </Route>
+
+            {/* User Profile */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<UserProfile />} />
             </Route>
 
             {/* Catch-all legacy route - redirect based on role */}

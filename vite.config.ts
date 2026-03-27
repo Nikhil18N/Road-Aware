@@ -29,18 +29,94 @@ export default defineConfig(() => ({
         short_name: 'RoadAware',
         description: 'Smart road damage reporting and tracking system',
         theme_color: '#ffffff',
+        display: 'standalone',
+        scope: '/',
+        start_url: '/',
+        orientation: 'portrait-primary',
+        categories: ['productivity', 'utilities'],
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        // Cache strategies
+        runtimeCaching: [
+          // API calls - network first, cache fallback
+          {
+            urlPattern: /^\/api\/.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 5 * 60 // 5 minutes
+              }
+            }
+          },
+          // Images - cache first
+          {
+            urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
+          },
+          // JavaScript, CSS - cache first with long expiration
+          {
+            urlPattern: /\.(js|css)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              }
+            }
+          },
+          // Documents - network first
+          {
+            urlPattern: /\.html$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'document-cache',
+              networkTimeoutSeconds: 3
+            }
+          }
+        ],
+        // Offline fallback page
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/__/, /^\/api\//, /\.svg$/, /favicon/],
+        // Clean up old caches
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true
+      },
+      devOptions: {
+        enabled: true,
+        suppressWarnings: true,
+        navigateFallbackDenylist: [/^\/api\//]
       }
     })
   ],
