@@ -22,6 +22,7 @@ import {
   BarChart3,
   Users,
   Wrench,
+  Download,
 } from "lucide-react";
 import { getAllComplaints, Complaint, getDepartmentAnalytics, DepartmentStats } from "@/services/api";
 import { DepartmentStatsView } from "@/components/dashboard/DepartmentStats";
@@ -119,6 +120,38 @@ const AdminDashboard = () => {
     }
   };
 
+  const exportToCSV = () => {
+    if (!complaintsData?.data.length) return;
+    
+    // Create CSV header
+    const headers = ['ID', 'Date', 'Status', 'Severity', 'Location', 'Description', 'Pothole Count'];
+    
+    // Create CSV rows
+    const rows = complaintsData.data.map((report: Complaint) => [
+      report.id,
+      new Date(report.created_at).toLocaleDateString(),
+      report.status,
+      report.severity || 'N/A',
+      `${report.latitude}, ${report.longitude}`,
+      `"${(report.description || '').replace(/"/g, '""')}"`, // escape quotes
+      report.potholes_count || 0
+    ]);
+    
+    // Combine header and rows
+    const csvContent = [headers.join(','), ...rows.map((row: any[]) => row.join(','))].join('\n');
+    
+    // Create and download the blob
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `road-aware-reports-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -139,11 +172,22 @@ const AdminDashboard = () => {
                 Manage all road damage reports and monitor system performance
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {new Date().toLocaleDateString()}
-              </span>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={exportToCSV}
+                disabled={!complaintsData?.data.length}
+              >
+                <Download className="h-4 w-4" />
+                Export Data
+              </Button>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {new Date().toLocaleDateString()}
+                </span>
+              </div>
             </div>
           </div>
 
