@@ -17,17 +17,19 @@ const PublicMap = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [assignedToMe, setAssignedToMe] = useState(false);
+  const [showMyComplaints, setShowMyComplaints] = useState(false);
   
   const role = user?.user_metadata?.role || 'user';
   const isWorker = role === 'admin' || role === 'worker';
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['complaints', 'all', statusFilter, severityFilter, assignedToMe],
+    queryKey: ['complaints', 'all', statusFilter, severityFilter, assignedToMe, showMyComplaints],
     queryFn: async () => {
       const filters: any = {};
       if (statusFilter !== 'all') filters.status = statusFilter;
       if (severityFilter !== 'all') filters.severity = severityFilter;
       if (assignedToMe && user) filters.assigned_to = user.id;
+      if (showMyComplaints && user) filters.my = true;
       
       const response = await getAllComplaints(filters);
       if (!response.success) throw new Error(response.message);
@@ -59,6 +61,17 @@ const PublicMap = () => {
                     onCheckedChange={setAssignedToMe}
                   />
                   <Label htmlFor="assigned-mode">My Assignments</Label>
+              </div>
+              )}
+
+              {user && !isWorker && (
+              <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-md border">
+                  <Switch 
+                    id="my-complaints-mode" 
+                    checked={showMyComplaints}
+                    onCheckedChange={setShowMyComplaints}
+                  />
+                  <Label htmlFor="my-complaints-mode">My Reports</Label>
               </div>
               )}
 

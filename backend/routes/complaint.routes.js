@@ -202,7 +202,7 @@ router.get(
  */
 router.post(
   '/:id/comments',
-  authenticate(false),
+  authenticate(true), // Optional auth - attach user if present, continue if not
   body('content').notEmpty().withMessage('Content is required'),
   complaintController.addComment
 );
