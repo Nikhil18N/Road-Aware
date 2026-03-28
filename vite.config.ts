@@ -23,7 +23,7 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.png'],
+      includeAssets: ['favicon.svg', 'robots.txt'],
       manifest: {
         name: 'Road Aware',
         short_name: 'RoadAware',
@@ -36,15 +36,15 @@ export default defineConfig(() => ({
         categories: ['productivity', 'utilities'],
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'favicon.svg',
             sizes: '192x192',
-            type: 'image/png',
+            type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'favicon.svg',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/svg+xml',
             purpose: 'any'
           }
         ],

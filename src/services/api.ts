@@ -2,12 +2,36 @@
  * API Client for Road-Aware Backend
  * Handles all HTTP requests to the Node.js/Express backend
  */
-import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+// Store session data in localStorage
+interface SessionData {
+  access_token: string;
+  refresh_token: string;
+  user: {
+    id: string;
+    email: string;
+    full_name?: string;
+    role?: string;
+  };
+}
+
+export function setSession(session: SessionData) {
+  localStorage.setItem('session', JSON.stringify(session));
+}
+
+export function getSession(): SessionData | null {
+  const session = localStorage.getItem('session');
+  return session ? JSON.parse(session) : null;
+}
+
+export function clearSession() {
+  localStorage.removeItem('session');
+}
+
 async function getAuthHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = getSession();
   const headers: Record<string, string> = {};
   if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -81,6 +105,155 @@ export interface DepartmentStats {
   resolved_complaints: number;
   pending_complaints: number;
   avg_resolution_hours: number;
+}
+
+/**
+ * Authentication API endpoints
+ */
+
+export async function register(
+  email: string,
+  password: string,
+  fullName?: string,
+  role?: string
+): Promise<ApiResponse<any>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: fullName,
+        role: role || 'user'
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || 'Registration failed',
+        errors: data.errors
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error registering:', error);
+    return {
+      success: false,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+}
+
+export async function login(
+  email: string,
+  password: string
+): Promise<ApiResponse<any>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || 'Login failed',
+        errors: data.errors
+      };
+    }
+
+    // Store session data
+    if (data.data?.session && data.data?.user) {
+      setSession({
+        ...data.data.session,
+        user: data.data.user
+      });
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    return {
+      success: false,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+}
+
+export async function logout(): Promise<ApiResponse<any>> {
+  try {
+    const session = getSession();
+    const refreshToken = session?.refresh_token;
+
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    const data = await response.json();
+
+    // Clear session regardless of response
+    clearSession();
+
+    return data;
+  } catch (error) {
+    console.error('Error logging out:', error);
+    // Still clear the session
+    clearSession();
+    return {
+      success: true,
+      message: 'Logged out',
+    };
+  }
+}
+
+export async function verifySessionWithBackend(): Promise<ApiResponse<any>> {
+  try {
+    const authHeaders = await getAuthHeaders();
+
+    if (!authHeaders['Authorization']) {
+      return {
+        success: false,
+        message: 'No session found',
+      };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/session`, {
+      headers: {
+        ...authHeaders
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      clearSession();
+      return data;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    return {
+      success: false,
+      message: 'Network error. Please check your connection.',
+    };
+  }
 }
 
 /**

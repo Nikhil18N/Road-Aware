@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const complaintRoutes = require('./routes/complaint.routes');
+const authRoutes = require('./routes/auth.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 const { checkBucketExists } = require('./services/storage.service');
@@ -45,6 +46,9 @@ app.get('/health', (req, res) => {
 // ============================
 // API Routes
 // ============================
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
 
 // API version 1
 app.use('/api/complaints', complaintRoutes);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { register } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,7 +32,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Simple validation for roles
+      // Validation for roles
       let actualRole = role;
       if (role !== 'user') {
         if (role === 'worker' && staffCode !== 'SMC-WORKER-2026') {
@@ -43,18 +43,11 @@ const Register = () => {
         }
       }
 
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: actualRole,
-          },
-        },
-      });
+      const response = await register(email, password, fullName, actualRole);
 
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.message || 'Registration failed');
+      }
 
       toast({
         title: "Registration successful",

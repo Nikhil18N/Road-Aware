@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { login } from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,36 +22,38 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setUserFromLogin } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await login(email, password);
 
-      if (error) throw error;
+      if (!response.success) {
+        throw new Error(response.message || 'Login failed');
+      }
 
       toast({
         title: "Logged in successfully",
         description: "Welcome back!",
       });
 
-      // Get user profile to determine role
-      if (data.user) {
-        const role = data.user.user_metadata?.role || 'user';
+      // Get user data from response
+      const userData = response.data?.user;
+      const role = userData?.role || 'user';
 
-        // Redirect based on role
-        if (role === 'admin') {
-          navigate('/admin-dashboard');
-        } else if (role === 'worker') {
-          navigate('/worker-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+      // Update AuthContext with user data
+      setUserFromLogin(userData);
+
+      // Redirect based on role
+      if (role === 'admin') {
+        navigate('/admin-dashboard');
+      } else if (role === 'worker') {
+        navigate('/worker-dashboard');
+      } else {
+        navigate('/dashboard');
       }
     } catch (error: any) {
       toast({
